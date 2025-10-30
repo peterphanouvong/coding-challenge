@@ -1,0 +1,86 @@
+import { Rule } from "./types";
+
+export const seedRules: Rule[] = [
+  {
+    id: "rule-1",
+    name: "AU Employment Contracts",
+    description: "Employment contracts for Australian employees",
+    enabled: true,
+    priority: 1,
+    conditions: [
+      { field: "requestType", operator: "equals", value: "employment" },
+      { field: "location", operator: "equals", value: "australia" },
+    ],
+    action: { assignTo: "john@acme.corp" },
+    createdAt: new Date().toISOString(),
+    matchCount: 0,
+  },
+  {
+    id: "rule-2",
+    name: "US Employment Contracts",
+    description: "Employment contracts for US employees",
+    enabled: true,
+    priority: 1,
+    conditions: [
+      { field: "requestType", operator: "equals", value: "employment" },
+      { field: "location", operator: "equals", value: "united states" },
+    ],
+    action: { assignTo: "jane@acme.corp" },
+    createdAt: new Date().toISOString(),
+    matchCount: 0,
+  },
+  {
+    id: "rule-3",
+    name: "AU Sales Contracts",
+    description: "Sales contracts for Australian clients",
+    enabled: true,
+    priority: 1,
+    conditions: [
+      { field: "requestType", operator: "equals", value: "sales" },
+      { field: "location", operator: "equals", value: "australia" },
+    ],
+    action: { assignTo: "sarah@acme.corp" },
+    createdAt: new Date().toISOString(),
+    matchCount: 0,
+  },
+  {
+    id: "rule-4",
+    name: "AU High-Value Sales",
+    description: "High-value sales contracts require senior review",
+    enabled: true,
+    priority: 2, // Higher priority than rule-3
+    conditions: [
+      { field: "requestType", operator: "equals", value: "sales" },
+      { field: "location", operator: "equals", value: "australia" },
+      { field: "value", operator: "greater_than", value: 50000 },
+    ],
+    action: { assignTo: "sarah@acme.corp" },
+    createdAt: new Date().toISOString(),
+    matchCount: 0,
+  },
+  {
+    id: "rule-5",
+    name: "NDA Requests",
+    description: "All NDA requests go to general legal team",
+    enabled: true,
+    priority: 1,
+    conditions: [{ field: "requestType", operator: "equals", value: "nda" }],
+    action: { assignTo: "legal-general@acme.corp" },
+    createdAt: new Date().toISOString(),
+    matchCount: 0,
+  },
+  {
+    id: "rule-6",
+    name: "US Sales Contracts",
+    description: "Sales contracts for US clients",
+    enabled: true,
+    priority: 1,
+    conditions: [
+      { field: "requestType", operator: "equals", value: "sales" },
+      { field: "location", operator: "equals", value: "united states" },
+    ],
+    action: { assignTo: "tom@acme.corp" },
+    createdAt: new Date().toISOString(),
+    matchCount: 0,
+  },
+];
