@@ -133,7 +133,9 @@ export class RuleEngine {
         reasoning: "Need more information to route this request.",
         needsClarification: {
           missingFields: missingFields as any,
-          question: this.generateClarificationQuestion(missingFields[0]),
+          questions: missingFields.map((field) =>
+            this.generateClarificationQuestion(field)
+          ),
         },
       };
     }

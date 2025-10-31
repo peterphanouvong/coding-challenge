@@ -161,7 +161,7 @@ export function RequestForm({ onSubmit, isLoading }: RequestFormProps) {
               setFormData({ ...formData, description: e.target.value })
             }
             placeholder="e.g., I need help reviewing a vendor contract for our new supplier..."
-            className="w-full min-h-[100px] px-3 py-2 rounded-md border border-input bg-background text-sm resize-y"
+            className="w-full min-h-[100px] px-3 py-2 rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground text-sm resize-y focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
             disabled={isLoading}
           />
           <p className="text-xs text-muted-foreground">
@@ -251,19 +251,19 @@ export function RequestForm({ onSubmit, isLoading }: RequestFormProps) {
                 <SelectContent>
                   <SelectItem value="low">
                     <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-green-500" />
+                      <span className="h-2 w-2 rounded-full bg-chart-4" />
                       Low - Can wait a few days
                     </div>
                   </SelectItem>
                   <SelectItem value="medium">
                     <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                      <span className="h-2 w-2 rounded-full bg-chart-5" />
                       Medium - Need response this week
                     </div>
                   </SelectItem>
                   <SelectItem value="high">
                     <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-red-500" />
+                      <span className="h-2 w-2 rounded-full bg-destructive" />
                       High - Urgent, need immediate attention
                     </div>
                   </SelectItem>

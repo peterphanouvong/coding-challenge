@@ -213,7 +213,7 @@ export default function ConfigurePage() {
           </div>
           <Button
             onClick={() => setShowAddAttorney(!showAddAttorney)}
-            variant={showAddAttorney ? "outline" : "default"}
+            variant="secondary"
           >
             <Plus className="h-4 w-4 mr-2" />
             {showAddAttorney ? "Cancel" : "Add Attorney"}
@@ -449,10 +449,16 @@ export default function ConfigurePage() {
                             </div>
                             <div className="flex gap-2">
                               <Badge
-                                className="cursor-pointer bg-green-500"
-                                variant={rule.enabled ? "default" : "secondary"}
+                                className="cursor-pointer flex gap-2"
+                                variant={"secondary"}
                                 onClick={() => toggleRuleEnabled(rule)}
                               >
+                                <span
+                                  className={`w-2 h-2 rounded-full ${
+                                    rule.enabled ? "bg-green-500" : "bg-red-500"
+                                  }`}
+                                />
+
                                 {rule.enabled ? "Enabled" : "Disabled"}
                               </Badge>
                               <Button

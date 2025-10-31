@@ -101,7 +101,8 @@ const extractInfoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
             "privacy_data",
             "general_advice",
           ],
-          description: "The type of legal request (infer from context)",
+          description:
+            "The type of legal request (infer from context, do not pick general_advice unless specified by user)",
         },
         location: {
           type: "string",
@@ -114,7 +115,7 @@ const extractInfoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
             "asia_pacific",
             "other",
           ],
-          description: "Geographic location (use 'other' if unsure)",
+          description: "Geographic location (clarify with user if unsure)",
         },
         summary: {
           type: "string",
@@ -314,8 +315,8 @@ CRITICAL: Call extract_request_info as soon as you can reasonably infer the requ
 
 PROCESS:
 1. Read the user's message and immediately infer the request type and location if possible
-2. If you can make a reasonable guess about both, call extract_request_info RIGHT AWAY
-3. Only ask ONE clarifying question if both requestType AND location are completely unclear
+2. Ask clarifying question if both requestType OR location are unclear
+3. If you can make a reasonable inference about the requestType AND location, call extract_request_info 
 4. The rule engine will find the best match - your job is just to extract basic info quickly
 
 REQUEST TYPES (infer from context):
@@ -329,10 +330,10 @@ REQUEST TYPES (infer from context):
 - privacy_data: data privacy, GDPR, security breaches
 - general_advice: anything unclear or general
 
-LOCATIONS (infer or assume):
+LOCATIONS (infer DO NOT assume, please ask clarifyuing questions):
 - australia, united states, united kingdom, canada, europe, asia_pacific, other
 
-IMPORTANT: Users are NOT lawyers. Use simple language. If unsure about location, assume "other" and let the rule engine decide.`,
+IMPORTANT: Users are NOT lawyers. Use simple language. `,
     },
     ...basicMessages.map((message) => ({
       role: message.role,
@@ -350,6 +351,8 @@ IMPORTANT: Users are NOT lawyers. Use simple language. If unsure about location,
       tools: [extractInfoTool],
       tool_choice: "auto",
       stream: true,
+      temperature: 0.1,
+      top_p: 0.2,
     });
 
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
@@ -446,15 +449,84 @@ IMPORTANT: Users are NOT lawyers. Use simple language. If unsure about location,
                   `---`
               );
             } else if (decision.needsClarification) {
+              // Build summary of what we know so far
+              const knownInfo: string[] = [];
+              if (args.requestType) {
+                const requestTypeFormatted = args.requestType
+                  .split("_")
+                  .map(
+                    (word: string) =>
+                      word.charAt(0).toUpperCase() + word.slice(1)
+                  )
+                  .join(" ");
+                knownInfo.push(`**Request type:** ${requestTypeFormatted}`);
+              }
+              if (args.location) {
+                const locationFormatted = args.location
+                  .split("_")
+                  .map(
+                    (word: string) =>
+                      word.charAt(0).toUpperCase() + word.slice(1)
+                  )
+                  .join(" ");
+                knownInfo.push(`**Location:** ${locationFormatted}`);
+              }
+              if (args.department) {
+                knownInfo.push(`**Department:** ${args.department}`);
+              }
+              if (args.urgency) {
+                knownInfo.push(`**Urgency:** ${args.urgency}`);
+              }
+              if (args.value) {
+                knownInfo.push(`**Value:** $${args.value.toLocaleString()}`);
+              }
+
               res.write(
                 `## 🤔 Just need a bit more info\n\n` +
-                  `${decision.needsClarification.question}\n\n` +
+                  (knownInfo.length > 0
+                    ? `**What I have so far:**\n${knownInfo.join("\n")}\n\n`
+                    : "") +
+                  `${decision.needsClarification.questions.map(
+                    (question) => `${question}\n`
+                  )}\n\n` +
                   `---`
               );
             } else {
+              // Build summary of what we gathered
+              const requestTypeFormatted = args.requestType
+                .split("_")
+                .map(
+                  (word: string) => word.charAt(0).toUpperCase() + word.slice(1)
+                )
+                .join(" ");
+              const locationFormatted = args.location
+                .split("_")
+                .map(
+                  (word: string) => word.charAt(0).toUpperCase() + word.slice(1)
+                )
+                .join(" ");
+
+              const summary: string[] = [
+                `**Request type:** ${requestTypeFormatted}`,
+                `**Location:** ${locationFormatted}`,
+              ];
+              if (args.department) {
+                summary.push(`**Department:** ${args.department}`);
+              }
+              if (args.urgency) {
+                summary.push(`**Urgency:** ${args.urgency}`);
+              }
+              if (args.value) {
+                summary.push(`**Value:** $${args.value.toLocaleString()}`);
+              }
+              if (args.summary) {
+                summary.push(`**Summary:** ${args.summary}`);
+              }
+
               res.write(
                 `## 👋 We'll take it from here\n\n` +
                   `I couldn't find a specific team member for this request, but don't worry! I've forwarded it to our general legal team at **legal-general@acme.corp** who will make sure it gets to the right person.\n\n` +
+                  `**Information captured:**\n${summary.join("\n")}\n\n` +
                   `Someone will be in touch shortly.\n\n` +
                   `---`
               );

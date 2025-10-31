@@ -132,23 +132,6 @@
   gap: 0.75rem;
 }
 
-.chat-input textarea {
-  flex: 1;
-  resize: none;
-  border-radius: 12px;
-  border: none;
-  padding: 0.9rem 1rem;
-  font: inherit;
-  background: rgba(15, 23, 42, 0.9);
-  color: inherit;
-  min-height: 60px;
-  outline: 1px solid rgba(148, 163, 184, 0.25);
-}
-
-.chat-input textarea:focus {
-  outline: 1px solid #3b82f6;
-}
-
 .chat-input input {
   flex: 1;
   width: 100%;
@@ -156,13 +139,10 @@
   border: none;
   padding: 0.9rem 1rem;
   font: inherit;
-  background: rgba(15, 23, 42, 0.9);
   color: inherit;
-  outline: 1px solid rgba(148, 163, 184, 0.25);
 }
 
 .chat-input input:focus {
-  outline: 1px solid #3b82f6;
 }
 /* 
 .chat-input button {

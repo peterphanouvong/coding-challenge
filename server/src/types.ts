@@ -1,14 +1,14 @@
 // Core domain types
 export type RequestType =
-  | "contracts"              // NDAs, customer agreements, vendor contracts
-  | "employment_hr"          // Hiring, terminations, workplace issues
-  | "litigation_disputes"    // Lawsuits, legal threats, disputes
-  | "intellectual_property"  // Trademarks, patents, copyrights
-  | "regulatory_compliance"  // Government rules, licenses, audits
-  | "corporate_ma"           // Fundraising, acquisitions, equity/stock
-  | "real_estate"            // Office leases, property matters
-  | "privacy_data"           // GDPR, CCPA, data breaches
-  | "general_advice";        // Not sure or doesn't fit above
+  | "contracts" // NDAs, customer agreements, vendor contracts
+  | "employment_hr" // Hiring, terminations, workplace issues
+  | "litigation_disputes" // Lawsuits, legal threats, disputes
+  | "intellectual_property" // Trademarks, patents, copyrights
+  | "regulatory_compliance" // Government rules, licenses, audits
+  | "corporate_ma" // Fundraising, acquisitions, equity/stock
+  | "real_estate" // Office leases, property matters
+  | "privacy_data" // GDPR, CCPA, data breaches
+  | "general_advice"; // Not sure or doesn't fit above
 
 export type Location =
   | "australia"
@@ -71,7 +71,7 @@ export interface RoutingDecision {
   reasoning: string;
   needsClarification?: {
     missingFields: ConditionField[];
-    question: string;
+    questions: string[];
   };
 }
 

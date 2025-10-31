@@ -4,6 +4,7 @@ import {
   URGENCY_VALUES,
 } from "@/components/RuleBuilder";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -15,6 +16,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { formatRequestType } from "@/lib/formatters";
 import { Location, RequestType } from "@/types";
+import { BookIcon } from "lucide-react";
 import Markdown from "markdown-to-jsx";
 import {
   ChangeEvent,
@@ -166,10 +168,6 @@ export default function ChatPage() {
 
   return (
     <div className="chat-page">
-      <header className="chat-header">
-        <h1>Frontdoor</h1>
-      </header>
-
       <div className="chat-window">
         {messages.length === 0 && (
           <div className="placeholder">
@@ -198,11 +196,11 @@ export default function ChatPage() {
       {error && <div className="chat-error">{error}</div>}
 
       <form
-        className="chat-input flex-col border rounded-2xl p-2"
+        className="chat-input flex-col border border-white/40 rounded-2xl p-2 shadow-[0px_8px_15px_0px_rgba(71,85,105,0.4)]"
         onSubmit={handleSubmit}
       >
         {showTemplate ? (
-          <div className="border rounded-xl p-4 flex flex-col gap-4">
+          <div className="rounded-xl px-4 py-1 flex flex-col gap-4">
             <div className="flex gap-4 items-center">
               <p className="">I have a request about </p>
               <div>
@@ -212,7 +210,7 @@ export default function ChatPage() {
                     setSelectedRequestType(value as RequestType)
                   }
                 >
-                  <SelectTrigger className="min-w-[220px] h-9 bg-transparent">
+                  <SelectTrigger className="min-w-[220px]">
                     <SelectValue placeholder="Select type...">
                       {formatRequestType(String(selectedRequestType))}
                     </SelectValue>
@@ -220,9 +218,11 @@ export default function ChatPage() {
                   <SelectContent>
                     {REQUEST_TYPE_VALUES.map((type) => (
                       <SelectItem key={type.value} value={type.value}>
-                        <div className="flex flex-col items-start text-black">
-                          <span className="font-medium">{type.label}</span>
-                          <span className="text-xs text-muted-foreground">
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium text-white">
+                            {type.label}
+                          </span>
+                          <span className="text-xs text-white/60">
                             {type.description}
                           </span>
                         </div>
@@ -242,7 +242,7 @@ export default function ChatPage() {
                     setSelectedUrgency(value as "low" | "medium" | "high")
                   }
                 >
-                  <SelectTrigger className="min-w-[180px] h-9 bg-transparent">
+                  <SelectTrigger className="min-w-[180px]">
                     <SelectValue placeholder="Select urgency..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -266,7 +266,7 @@ export default function ChatPage() {
                     setSelectedLocation(value as Location)
                   }
                 >
-                  <SelectTrigger className="min-w-[220px] h-9 bg-transparent">
+                  <SelectTrigger className="min-w-[220px]">
                     <SelectValue placeholder="Select location..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -281,8 +281,9 @@ export default function ChatPage() {
             </div>
           </div>
         ) : (
-          <input
+          <Input
             id="chat-input"
+            className="ring-0 bg-transparent border-none focus-visible:ring-0"
             type="text"
             value={input}
             onChange={handleInputChange}
@@ -291,7 +292,7 @@ export default function ChatPage() {
           />
         )}
 
-        <div className="flex justify-between">
+        <div className="flex justify-between px-4 py-2">
           <div className="flex items-center space-x-2">
             <Switch
               id="template"
@@ -300,7 +301,9 @@ export default function ChatPage() {
                 setShowTemplate(!showTemplate);
               }}
             />
-            <Label htmlFor="template">Use template</Label>
+            <Label htmlFor="template" className="text-white/70 text-sm">
+              Use template
+            </Label>
           </div>
 
           <Button type="submit" disabled={!canSubmit}>

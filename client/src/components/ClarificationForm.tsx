@@ -11,7 +11,10 @@ import {
 } from "@/components/ui/select";
 import { Send } from "lucide-react";
 import type { RequestType, Location } from "@/types/rules";
-import { REQUEST_TYPE_LABELS, REQUEST_TYPE_DESCRIPTIONS } from "@/lib/formatters";
+import {
+  REQUEST_TYPE_LABELS,
+  REQUEST_TYPE_DESCRIPTIONS,
+} from "@/lib/formatters";
 
 interface ClarificationField {
   name: string;
@@ -46,15 +49,19 @@ const LOCATIONS: Location[] = [
   "other",
 ];
 
-export function ClarificationForm({ message, fields, onSubmit }: ClarificationFormProps) {
+export function ClarificationForm({
+  message,
+  fields,
+  onSubmit,
+}: ClarificationFormProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     // Check required fields
-    const requiredFields = fields.filter(f => f.required);
-    const allRequiredFilled = requiredFields.every(f => formData[f.name]);
+    const requiredFields = fields.filter((f) => f.required);
+    const allRequiredFilled = requiredFields.every((f) => formData[f.name]);
 
     if (allRequiredFilled) {
       onSubmit(formData);
@@ -76,11 +83,17 @@ export function ClarificationForm({ message, fields, onSubmit }: ClarificationFo
         <div key={fieldName} className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
             Request Type
-            {field.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+            {field.required && (
+              <Badge variant="destructive" className="text-xs">
+                Required
+              </Badge>
+            )}
           </label>
           <Select
             value={formData[fieldName] || ""}
-            onValueChange={(value) => setFormData({ ...formData, [fieldName]: value })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, [fieldName]: value })
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Select type..." />
@@ -89,7 +102,9 @@ export function ClarificationForm({ message, fields, onSubmit }: ClarificationFo
               {REQUEST_TYPES.map((type) => (
                 <SelectItem key={type} value={type}>
                   <div className="flex flex-col py-1">
-                    <span className="font-medium">{REQUEST_TYPE_LABELS[type]}</span>
+                    <span className="font-medium">
+                      {REQUEST_TYPE_LABELS[type]}
+                    </span>
                     <span className="text-xs text-muted-foreground">
                       {REQUEST_TYPE_DESCRIPTIONS[type]}
                     </span>
@@ -107,11 +122,17 @@ export function ClarificationForm({ message, fields, onSubmit }: ClarificationFo
         <div key={fieldName} className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
             Location
-            {field.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+            {field.required && (
+              <Badge variant="destructive" className="text-xs">
+                Required
+              </Badge>
+            )}
           </label>
           <Select
             value={formData[fieldName] || ""}
-            onValueChange={(value) => setFormData({ ...formData, [fieldName]: value })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, [fieldName]: value })
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Select location..." />
@@ -133,7 +154,11 @@ export function ClarificationForm({ message, fields, onSubmit }: ClarificationFo
         <div key={fieldName} className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
             Contract Value
-            {field.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+            {field.required && (
+              <Badge variant="destructive" className="text-xs">
+                Required
+              </Badge>
+            )}
           </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
@@ -145,7 +170,9 @@ export function ClarificationForm({ message, fields, onSubmit }: ClarificationFo
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  [fieldName]: e.target.value ? Number(e.target.value) : undefined,
+                  [fieldName]: e.target.value
+                    ? Number(e.target.value)
+                    : undefined,
                 })
               }
               placeholder="100000"
@@ -161,11 +188,17 @@ export function ClarificationForm({ message, fields, onSubmit }: ClarificationFo
         <div key={fieldName} className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
             Department
-            {field.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+            {field.required && (
+              <Badge variant="destructive" className="text-xs">
+                Required
+              </Badge>
+            )}
           </label>
           <Input
             value={formData[fieldName] || ""}
-            onChange={(e) => setFormData({ ...formData, [fieldName]: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, [fieldName]: e.target.value })
+            }
             placeholder="e.g., Engineering, Sales"
           />
         </div>
@@ -177,11 +210,17 @@ export function ClarificationForm({ message, fields, onSubmit }: ClarificationFo
         <div key={fieldName} className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
             Urgency
-            {field.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+            {field.required && (
+              <Badge variant="destructive" className="text-xs">
+                Required
+              </Badge>
+            )}
           </label>
           <Select
             value={formData[fieldName] || ""}
-            onValueChange={(value) => setFormData({ ...formData, [fieldName]: value })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, [fieldName]: value })
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Select urgency..." />
@@ -189,19 +228,19 @@ export function ClarificationForm({ message, fields, onSubmit }: ClarificationFo
             <SelectContent>
               <SelectItem value="low">
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-green-500" />
+                  <span className="h-2 w-2 rounded-full bg-chart-4" />
                   Low - Can wait
                 </div>
               </SelectItem>
               <SelectItem value="medium">
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                  <span className="h-2 w-2 rounded-full bg-chart-5" />
                   Medium - This week
                 </div>
               </SelectItem>
               <SelectItem value="high">
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-red-500" />
+                  <span className="h-2 w-2 rounded-full bg-destructive" />
                   High - Urgent
                 </div>
               </SelectItem>
@@ -214,8 +253,8 @@ export function ClarificationForm({ message, fields, onSubmit }: ClarificationFo
     return null;
   };
 
-  const requiredFields = fields.filter(f => f.required);
-  const allRequiredFilled = requiredFields.every(f => formData[f.name]);
+  const requiredFields = fields.filter((f) => f.required);
+  const allRequiredFilled = requiredFields.every((f) => formData[f.name]);
 
   return (
     <div className="border rounded-lg p-4 bg-muted/20 space-y-4">
@@ -224,11 +263,7 @@ export function ClarificationForm({ message, fields, onSubmit }: ClarificationFo
       <form onSubmit={handleSubmit} className="space-y-4">
         {fields.map(renderField)}
 
-        <Button
-          type="submit"
-          disabled={!allRequiredFilled}
-          className="w-full"
-        >
+        <Button type="submit" disabled={!allRequiredFilled} className="w-full">
           <Send className="h-4 w-4 mr-2" />
           Submit
         </Button>
