@@ -10,15 +10,31 @@ import {
 } from "@/components/ui/card";
 import { RuleBuilder } from "@/components/RuleBuilder";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Edit2, Save, X, Mail, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Edit2,
+  Save,
+  X,
+  Mail,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import type { Rule, RulesByAssignee, Condition } from "@/types/rules";
-import { formatFieldName, formatOperator, formatConditionValue } from "@/lib/formatters";
+import {
+  formatFieldName,
+  formatOperator,
+  formatConditionValue,
+} from "@/lib/formatters";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8999";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8999";
 
 export default function ConfigurePage() {
   const [rulesByAssignee, setRulesByAssignee] = useState<RulesByAssignee>({});
-  const [expandedAssignees, setExpandedAssignees] = useState<Set<string>>(new Set());
+  const [expandedAssignees, setExpandedAssignees] = useState<Set<string>>(
+    new Set()
+  );
   const [editingRule, setEditingRule] = useState<string | null>(null);
   const [creatingRuleFor, setCreatingRuleFor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -191,7 +207,8 @@ export default function ConfigurePage() {
           <div>
             <h1 className="text-3xl font-bold mb-2">Rule Configuration</h1>
             <p className="text-muted-foreground">
-              Manage routing rules for each attorney. Rules are evaluated by priority (higher first).
+              Manage routing rules for each attorney. Rules are evaluated by
+              priority (higher first).
             </p>
           </div>
           <Button
@@ -237,11 +254,16 @@ export default function ConfigurePage() {
       <div className="space-y-6">
         {Object.entries(rulesByAssignee).map(([assignee, rules]) => {
           const isExpanded = expandedAssignees.has(assignee);
-          const sortedRules = [...rules].sort((a, b) => b.priority - a.priority);
+          const sortedRules = [...rules].sort(
+            (a, b) => b.priority - a.priority
+          );
 
           return (
             <Card key={assignee}>
-              <CardHeader className="cursor-pointer" onClick={() => toggleAssignee(assignee)}>
+              <CardHeader
+                className="cursor-pointer"
+                onClick={() => toggleAssignee(assignee)}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {isExpanded ? (
@@ -305,7 +327,10 @@ export default function ConfigurePage() {
                           placeholder="Description (optional)"
                           value={formData.description}
                           onChange={(e) =>
-                            setFormData({ ...formData, description: e.target.value })
+                            setFormData({
+                              ...formData,
+                              description: e.target.value,
+                            })
                           }
                         />
 
@@ -321,7 +346,11 @@ export default function ConfigurePage() {
                             <Save className="h-4 w-4 mr-2" />
                             Save Rule
                           </Button>
-                          <Button onClick={cancelEditing} variant="outline" size="sm">
+                          <Button
+                            onClick={cancelEditing}
+                            variant="outline"
+                            size="sm"
+                          >
                             <X className="h-4 w-4 mr-2" />
                             Cancel
                           </Button>
@@ -345,7 +374,10 @@ export default function ConfigurePage() {
                               placeholder="Rule name"
                               value={formData.name}
                               onChange={(e) =>
-                                setFormData({ ...formData, name: e.target.value })
+                                setFormData({
+                                  ...formData,
+                                  name: e.target.value,
+                                })
                               }
                               className="flex-1"
                             />
@@ -367,7 +399,10 @@ export default function ConfigurePage() {
                             placeholder="Description (optional)"
                             value={formData.description}
                             onChange={(e) =>
-                              setFormData({ ...formData, description: e.target.value })
+                              setFormData({
+                                ...formData,
+                                description: e.target.value,
+                              })
                             }
                           />
 
@@ -383,7 +418,11 @@ export default function ConfigurePage() {
                               <Save className="h-4 w-4 mr-2" />
                               Save
                             </Button>
-                            <Button onClick={cancelEditing} variant="outline" size="sm">
+                            <Button
+                              onClick={cancelEditing}
+                              variant="outline"
+                              size="sm"
+                            >
                               <X className="h-4 w-4 mr-2" />
                               Cancel
                             </Button>
@@ -394,11 +433,13 @@ export default function ConfigurePage() {
                           <div className="flex items-start justify-between mb-3">
                             <div>
                               <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold text-lg">{rule.name}</h3>
-                                <Badge variant={rule.enabled ? "default" : "secondary"}>
-                                  {rule.enabled ? "Enabled" : "Disabled"}
+                                <h3 className="font-semibold text-lg">
+                                  {rule.name}
+                                </h3>
+
+                                <Badge variant="outline">
+                                  Priority {rule.priority}
                                 </Badge>
-                                <Badge variant="outline">Priority {rule.priority}</Badge>
                               </div>
                               {rule.description && (
                                 <p className="text-sm text-muted-foreground">
@@ -407,13 +448,13 @@ export default function ConfigurePage() {
                               )}
                             </div>
                             <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
+                              <Badge
+                                className="cursor-pointer bg-green-500"
+                                variant={rule.enabled ? "default" : "secondary"}
                                 onClick={() => toggleRuleEnabled(rule)}
                               >
-                                {rule.enabled ? "🔵" : "⚪"}
-                              </Button>
+                                {rule.enabled ? "Enabled" : "Disabled"}
+                              </Badge>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -440,11 +481,18 @@ export default function ConfigurePage() {
                                 <span className="font-medium text-muted-foreground">
                                   {idx === 0 ? "Where" : "And"}
                                 </span>
-                                <Badge variant="outline">{formatFieldName(condition.field)}</Badge>
+                                <Badge variant="outline">
+                                  {formatFieldName(condition.field)}
+                                </Badge>
                                 <span className="text-muted-foreground">
                                   {formatOperator(condition.operator)}
                                 </span>
-                                <Badge>{formatConditionValue(condition.field, condition.value)}</Badge>
+                                <Badge>
+                                  {formatConditionValue(
+                                    condition.field,
+                                    condition.value
+                                  )}
+                                </Badge>
                               </div>
                             ))}
                           </div>

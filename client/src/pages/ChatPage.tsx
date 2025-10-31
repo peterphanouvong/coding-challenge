@@ -181,7 +181,10 @@ export default function ChatPage() {
             <span className="message-role">
               {message.role === "user" ? "You" : "Assistant"}
             </span>
-            <p style={{ whiteSpace: "pre-wrap" }}>
+            <p
+              className="prose prose-invert"
+              style={{ whiteSpace: "pre-wrap" }}
+            >
               <Markdown>
                 {message.content ||
                   (message.role === "assistant" && isStreaming ? "…" : "")}
@@ -293,14 +296,14 @@ export default function ChatPage() {
             <Switch
               id="template"
               checked={showTemplate}
-              onClick={(e) => {
+              onClick={() => {
                 setShowTemplate(!showTemplate);
               }}
             />
             <Label htmlFor="template">Use template</Label>
           </div>
 
-          <Button variant={"secondary"} type="submit" disabled={!canSubmit}>
+          <Button type="submit" disabled={!canSubmit}>
             {isStreaming ? "Thinking…" : "Send"}
           </Button>
         </div>

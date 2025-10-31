@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import express, { Request, Response } from "express";
 import cors from "cors";
 import OpenAI from "openai";
+import { z } from "zod";
 import { RuleEngine } from "./services/ruleEngine";
 import { seedRules } from "./seed-data";
 import { ExtractedInfo, RoutingDecision } from "./types";
@@ -49,13 +50,41 @@ const allowedRoles: ReadonlySet<BasicRole> = new Set<BasicRole>([
   "assistant",
 ]);
 
+// Zod schema for request extraction validation
+const extractRequestSchema = z.object({
+  requestType: z.enum([
+    "contracts",
+    "employment_hr",
+    "litigation_disputes",
+    "intellectual_property",
+    "regulatory_compliance",
+    "corporate_ma",
+    "real_estate",
+    "privacy_data",
+    "general_advice",
+  ]),
+  location: z.enum([
+    "australia",
+    "united states",
+    "united kingdom",
+    "canada",
+    "europe",
+    "asia_pacific",
+    "other",
+  ]),
+  summary: z.string(),
+  value: z.number().optional(),
+  department: z.string().optional(),
+  urgency: z.enum(["low", "medium", "high"]).optional(),
+});
+
 // Function definition for the AI agent to extract information
 const extractInfoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
   type: "function",
   function: {
     name: "extract_request_info",
     description:
-      "Extracts structured information from the user's legal request. Call this function when you have gathered ALL required information. The rule engine will determine the routing based on this extracted information.",
+      "Call this immediately once you can infer the request type and location from the user's message. The rule engine handles the rest.",
     parameters: {
       type: "object",
       properties: {
@@ -72,7 +101,7 @@ const extractInfoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
             "privacy_data",
             "general_advice",
           ],
-          description: "The type of legal request",
+          description: "The type of legal request (infer from context)",
         },
         location: {
           type: "string",
@@ -85,25 +114,24 @@ const extractInfoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
             "asia_pacific",
             "other",
           ],
-          description:
-            "The geographic location of the requestor (use lowercase)",
+          description: "Geographic location (use 'other' if unsure)",
+        },
+        summary: {
+          type: "string",
+          description: "Brief summary of what the user needs",
         },
         value: {
           type: "number",
-          description: "The contract value if applicable (optional)",
+          description: "Contract/deal value in dollars (optional)",
         },
         department: {
           type: "string",
-          description: "The department making the request (optional)",
+          description: "User's department (optional)",
         },
         urgency: {
           type: "string",
           enum: ["low", "medium", "high"],
-          description: "How urgent is the request (optional)",
-        },
-        summary: {
-          type: "string",
-          description: "A brief summary of the request for context",
+          description: "How urgent (optional)",
         },
       },
       required: ["requestType", "location", "summary"],
@@ -280,30 +308,31 @@ app.post("/api/chat", async (req: Request, res: Response) => {
   const chatMessages: ChatCompletionMessageParam[] = [
     {
       role: "system",
-      content: `You are a helpful legal triage assistant for Acme Corp. Your job is to:
+      content: `You are a legal triage assistant for Acme Corp. Your job is to quickly connect employees with the right legal team member.
 
-      1. Greet users warmly and understand their legal request from the initial message
-      2. Ask follow-up questions to gather required information (requestType and location)
-      3. Once you have ALL required information (requestType + location), call extract_request_info to route the request
-      4. The system will automatically route their request based on configured rules
+CRITICAL: Call extract_request_info as soon as you can reasonably infer the request type and location. Don't ask unnecessary questions.
 
-AVAILABLE REQUEST TYPES:
-- contracts: NDAs, customer agreements, vendor contracts
-- employment_hr: Hiring, terminations, workplace issues
-- litigation_disputes: Lawsuits, legal threats, disputes
-- intellectual_property: Trademarks, patents, copyrights
-- regulatory_compliance: Government rules, licenses, audits
-- corporate_ma: Fundraising, acquisitions, equity/stock
-- real_estate: Office leases, property matters
-- privacy_data: GDPR, CCPA, data breaches
-- general_advice: Not sure or doesn't fit above
+PROCESS:
+1. Read the user's message and immediately infer the request type and location if possible
+2. If you can make a reasonable guess about both, call extract_request_info RIGHT AWAY
+3. Only ask ONE clarifying question if both requestType AND location are completely unclear
+4. The rule engine will find the best match - your job is just to extract basic info quickly
 
-AVAILABLE LOCATIONS:
+REQUEST TYPES (infer from context):
+- contracts: agreements, NDAs, terms, vendor contracts
+- employment_hr: hiring, firing, HR issues, workplace problems
+- litigation_disputes: lawsuits, disputes, legal threats
+- intellectual_property: trademarks, patents, IP, copyrights
+- regulatory_compliance: regulations, compliance, licenses
+- corporate_ma: fundraising, M&A, acquisitions, investments
+- real_estate: property, leases, office space
+- privacy_data: data privacy, GDPR, security breaches
+- general_advice: anything unclear or general
+
+LOCATIONS (infer or assume):
 - australia, united states, united kingdom, canada, europe, asia_pacific, other
 
-INFERENCE GUIDELINES:
-- If location isn't mentioned, you can ask briefly or default to a reasonable assumption
-- Optional fields (value, department, urgency) should be inferred if obvious, otherwise left empty`,
+IMPORTANT: Users are NOT lawyers. Use simple language. If unsure about location, assume "other" and let the rule engine decide.`,
     },
     ...basicMessages.map((message) => ({
       role: message.role,
@@ -405,34 +434,28 @@ INFERENCE GUIDELINES:
                 .join(" ");
 
               res.write(
-                `\n\n---\n\n` +
-                  `## ✅ Request Successfully Routed\n\n` +
-                  `**Assigned to:** ${decision.assignTo}\n\n` +
-                  `**Request Type:** ${requestTypeFormatted}\n\n` +
-                  `**Confidence:** ${decision.confidence}%\n\n` +
-                  `**Routing Reason:** ${decision.reasoning}\n\n` +
-                  (decision.matchedRule
-                    ? `**Matched Rule:** ${decision.matchedRule.name}\n\n`
+                `## ✅ We've got you covered!\n\n` +
+                  `Your request has been assigned to **${decision.assignTo}**.\n\n` +
+                  `**What happens next?**\n` +
+                  `${
+                    decision.assignTo
+                  } specializes in ${requestTypeFormatted.toLowerCase()} matters and will review your request soon. They'll reach out if they need any additional information.\n\n` +
+                  (decision.confidence && decision.confidence < 100
+                    ? `*This routing is based on the information provided (${decision.confidence}% match).*\n\n`
                     : "") +
-                  `---\n\n` +
-                  `${decision.assignTo} will review your request and get back to you shortly.`
+                  `---`
               );
             } else if (decision.needsClarification) {
               res.write(
-                `\n\n---\n\n` +
-                  `## ⚠️ Additional Information Needed\n\n` +
-                  `**Missing:** ${decision.needsClarification.missingFields.join(
-                    ", "
-                  )}\n\n` +
+                `## 🤔 Just need a bit more info\n\n` +
                   `${decision.needsClarification.question}\n\n` +
                   `---`
               );
             } else {
               res.write(
-                `\n\n---\n\n` +
-                  `## ⚠️ No Matching Rule Found\n\n` +
-                  `**Reason:** ${decision.reasoning}\n\n` +
-                  `**Fallback:** This request will be routed to legal-general@acme.corp for manual review.\n\n` +
+                `## 👋 We'll take it from here\n\n` +
+                  `I couldn't find a specific team member for this request, but don't worry! I've forwarded it to our general legal team at **legal-general@acme.corp** who will make sure it gets to the right person.\n\n` +
+                  `Someone will be in touch shortly.\n\n` +
                   `---`
               );
             }
