@@ -154,7 +154,12 @@ export function ClarificationForm({ data, onSubmit }: ClarificationFormProps) {
       )}
 
       <div className="flex justify-end pt-2">
-        <Button onClick={handleSubmit} disabled={!canSubmit} size="sm">
+        <Button
+          variant={"default"}
+          onClick={handleSubmit}
+          disabled={!canSubmit}
+          size="sm"
+        >
           Submit
         </Button>
       </div>

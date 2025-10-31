@@ -29,7 +29,9 @@ export function ActionButtons({ data }: ActionButtonsProps) {
       case "email":
         if (action.email) {
           const mailtoUrl = `mailto:${action.email}${
-            action.subject ? `?subject=${encodeURIComponent(action.subject)}` : ""
+            action.subject
+              ? `?subject=${encodeURIComponent(action.subject)}`
+              : ""
           }${
             action.body
               ? `${action.subject ? "&" : "?"}body=${encodeURIComponent(
@@ -82,7 +84,6 @@ export function ActionButtons({ data }: ActionButtonsProps) {
           onClick={() => handleAction(action, index)}
           variant="secondary"
           size="sm"
-          className="bg-white/10 hover:bg-white/20 border border-white/30"
         >
           {getIcon(action.type, index)}
           {action.type === "copy" && copiedIndex === index

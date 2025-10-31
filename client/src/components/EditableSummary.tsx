@@ -66,9 +66,7 @@ export function EditableSummary({ data, onRetry }: EditableSummaryProps) {
 
   const formatFieldValue = (field: SummaryField) => {
     if (field.key === "requestType") {
-      const typeInfo = REQUEST_TYPE_VALUES.find(
-        (t) => t.value === field.value
-      );
+      const typeInfo = REQUEST_TYPE_VALUES.find((t) => t.value === field.value);
       return typeInfo?.label || String(field.value);
     }
     if (field.key === "location") {
@@ -94,7 +92,6 @@ export function EditableSummary({ data, onRetry }: EditableSummaryProps) {
             size="sm"
             className="text-white/70 hover:text-white/90 h-8"
           >
-            <Pencil className="h-3 w-3 mr-1" />
             Edit
           </Button>
         )}
@@ -117,7 +114,10 @@ export function EditableSummary({ data, onRetry }: EditableSummaryProps) {
             if (field.key === "requestType") {
               return (
                 <div key={field.key} className="space-y-1">
-                  <Label htmlFor={`edit-${field.key}`} className="text-white/70 text-xs">
+                  <Label
+                    htmlFor={`edit-${field.key}`}
+                    className="text-white/70 text-xs"
+                  >
                     {field.label}
                   </Label>
                   <Select
@@ -171,7 +171,10 @@ export function EditableSummary({ data, onRetry }: EditableSummaryProps) {
 
             return (
               <div key={field.key} className="space-y-1">
-                <Label htmlFor={`edit-${field.key}`} className="text-white/70 text-xs">
+                <Label
+                  htmlFor={`edit-${field.key}`}
+                  className="text-white/70 text-xs"
+                >
                   {field.label}
                 </Label>
                 <Input
@@ -203,7 +206,6 @@ export function EditableSummary({ data, onRetry }: EditableSummaryProps) {
               size="sm"
               className="border-white/30"
             >
-              <X className="h-3 w-3 mr-1" />
               Cancel
             </Button>
           </div>
