@@ -15,6 +15,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { formatRequestType } from "@/lib/formatters";
 import { Location, RequestType } from "@/types";
+import Markdown from "markdown-to-jsx";
 import {
   ChangeEvent,
   FormEvent,
@@ -181,8 +182,10 @@ export default function ChatPage() {
               {message.role === "user" ? "You" : "Assistant"}
             </span>
             <p style={{ whiteSpace: "pre-wrap" }}>
-              {message.content ||
-                (message.role === "assistant" && isStreaming ? "…" : "")}
+              <Markdown>
+                {message.content ||
+                  (message.role === "assistant" && isStreaming ? "…" : "")}
+              </Markdown>
             </p>
           </div>
         ))}

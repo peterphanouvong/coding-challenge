@@ -54,7 +54,8 @@ const extractInfoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
   type: "function",
   function: {
     name: "extract_request_info",
-    description: "Extracts structured information from the user's legal request. Call this function when you have gathered ALL required information. The rule engine will determine the routing based on this extracted information.",
+    description:
+      "Extracts structured information from the user's legal request. Call this function when you have gathered ALL required information. The rule engine will determine the routing based on this extracted information.",
     parameters: {
       type: "object",
       properties: {
@@ -69,7 +70,7 @@ const extractInfoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
             "corporate_ma",
             "real_estate",
             "privacy_data",
-            "general_advice"
+            "general_advice",
           ],
           description: "The type of legal request",
         },
@@ -82,9 +83,10 @@ const extractInfoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
             "canada",
             "europe",
             "asia_pacific",
-            "other"
+            "other",
           ],
-          description: "The geographic location of the requestor (use lowercase)",
+          description:
+            "The geographic location of the requestor (use lowercase)",
         },
         value: {
           type: "number",
@@ -280,10 +282,10 @@ app.post("/api/chat", async (req: Request, res: Response) => {
       role: "system",
       content: `You are a helpful legal triage assistant for Acme Corp. Your job is to:
 
-1. Greet users warmly and understand their legal request from the initial message
-2. Ask follow-up questions to gather required information (requestType and location)
-3. Once you have ALL required information (requestType + location), call extract_request_info to route the request
-4. The system will automatically route their request based on configured rules
+      1. Greet users warmly and understand their legal request from the initial message
+      2. Ask follow-up questions to gather required information (requestType and location)
+      3. Once you have ALL required information (requestType + location), call extract_request_info to route the request
+      4. The system will automatically route their request based on configured rules
 
 AVAILABLE REQUEST TYPES:
 - contracts: NDAs, customer agreements, vendor contracts
@@ -297,7 +299,11 @@ AVAILABLE REQUEST TYPES:
 - general_advice: Not sure or doesn't fit above
 
 AVAILABLE LOCATIONS:
-- australia, united states, united kingdom, canada, europe, asia_pacific, other`,
+- australia, united states, united kingdom, canada, europe, asia_pacific, other
+
+INFERENCE GUIDELINES:
+- If location isn't mentioned, you can ask briefly or default to a reasonable assumption
+- Optional fields (value, department, urgency) should be inferred if obvious, otherwise left empty`,
     },
     ...basicMessages.map((message) => ({
       role: message.role,
@@ -382,34 +388,52 @@ AVAILABLE LOCATIONS:
             };
 
             // Run through rule engine
-            const decision: RoutingDecision = ruleEngine.route(extractedInfo, currentRules);
+            const decision: RoutingDecision = ruleEngine.route(
+              extractedInfo,
+              currentRules
+            );
 
             console.log("Routing decision:", decision);
 
             // Format response based on decision
             if (decision.matched && decision.assignTo) {
-              const ruleInfo = decision.matchedRule
-                ? ` (matched rule: "${decision.matchedRule.name}")`
-                : "";
+              const requestTypeFormatted = args.requestType
+                .split("_")
+                .map(
+                  (word: string) => word.charAt(0).toUpperCase() + word.slice(1)
+                )
+                .join(" ");
 
               res.write(
-                `\n\n✅ **Your request has been successfully routed!**\n\n` +
-                `**Assigned to:** ${decision.assignTo}\n` +
-                `**Confidence:** ${decision.confidence}%\n` +
-                `**Reason:** ${decision.reasoning}${ruleInfo}\n\n` +
-                `${decision.assignTo} will review your ${args.requestType} request and get back to you shortly.`
+                `\n\n---\n\n` +
+                  `## ✅ Request Successfully Routed\n\n` +
+                  `**Assigned to:** ${decision.assignTo}\n\n` +
+                  `**Request Type:** ${requestTypeFormatted}\n\n` +
+                  `**Confidence:** ${decision.confidence}%\n\n` +
+                  `**Routing Reason:** ${decision.reasoning}\n\n` +
+                  (decision.matchedRule
+                    ? `**Matched Rule:** ${decision.matchedRule.name}\n\n`
+                    : "") +
+                  `---\n\n` +
+                  `${decision.assignTo} will review your request and get back to you shortly.`
               );
             } else if (decision.needsClarification) {
               res.write(
-                `\n\n⚠️ **Need more information to route your request**\n\n` +
-                `Missing: ${decision.needsClarification.missingFields.join(", ")}\n\n` +
-                `${decision.needsClarification.question}`
+                `\n\n---\n\n` +
+                  `## ⚠️ Additional Information Needed\n\n` +
+                  `**Missing:** ${decision.needsClarification.missingFields.join(
+                    ", "
+                  )}\n\n` +
+                  `${decision.needsClarification.question}\n\n` +
+                  `---`
               );
             } else {
               res.write(
-                `\n\n⚠️ **Could not find a matching rule**\n\n` +
-                `**Reason:** ${decision.reasoning}\n\n` +
-                `I'll route this to legal-general@acme.corp for manual review.`
+                `\n\n---\n\n` +
+                  `## ⚠️ No Matching Rule Found\n\n` +
+                  `**Reason:** ${decision.reasoning}\n\n` +
+                  `**Fallback:** This request will be routed to legal-general@acme.corp for manual review.\n\n` +
+                  `---`
               );
             }
           } catch (parseError) {
