@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -8,8 +9,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 import { RuleBuilder } from "@/components/RuleBuilder";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Plus,
   Trash2,
@@ -19,6 +32,7 @@ import {
   Mail,
   ChevronDown,
   ChevronRight,
+  Search,
 } from "lucide-react";
 import type { Rule, RulesByAssignee, Condition } from "@/types/rules";
 import {
@@ -43,6 +57,14 @@ export default function ConfigurePage() {
   const [newAttorneyEmail, setNewAttorneyEmail] = useState("");
   const [showAddAttorney, setShowAddAttorney] = useState(false);
 
+  // Search state
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [highlightedItem, setHighlightedItem] = useState<{
+    type: "attorney" | "rule";
+    id: string;
+  } | null>(null);
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
   // Form state for editing/creating
   const [formData, setFormData] = useState<Partial<Rule>>({
     name: "",
@@ -55,6 +77,18 @@ export default function ConfigurePage() {
 
   useEffect(() => {
     fetchRules();
+  }, []);
+
+  // Keyboard shortcut for search (Ctrl/Cmd + K)
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setSearchOpen((open) => !open);
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
   }, []);
 
   const fetchRules = async () => {
@@ -192,6 +226,33 @@ export default function ConfigurePage() {
     setShowAddAttorney(false);
   };
 
+  const handleSearchSelect = (type: "attorney" | "rule", id: string, assignee?: string) => {
+    setSearchOpen(false);
+
+    // Expand the assignee if selecting a rule
+    if (type === "rule" && assignee) {
+      setExpandedAssignees((prev) => new Set([...prev, assignee]));
+    } else if (type === "attorney") {
+      setExpandedAssignees((prev) => new Set([...prev, id]));
+    }
+
+    // Highlight the item
+    setHighlightedItem({ type, id });
+
+    // Scroll to the item after a brief delay to allow for expansion
+    setTimeout(() => {
+      const element = cardRefs.current.get(id);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+
+      // Remove highlight after 2 seconds
+      setTimeout(() => {
+        setHighlightedItem(null);
+      }, 2000);
+    }, 100);
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -202,6 +263,71 @@ export default function ConfigurePage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
+      {/* Search Command Menu */}
+      <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
+        <DialogContent className="p-0">
+          <Command className="rounded-lg border shadow-md">
+            <CommandInput placeholder="Search attorneys and rules..." />
+            <CommandList>
+              <CommandEmpty>No results found.</CommandEmpty>
+
+              {/* Attorneys */}
+              {Object.keys(rulesByAssignee).length > 0 && (
+                <CommandGroup heading="Attorneys">
+                  {Object.entries(rulesByAssignee).map(([assignee, rules]) => (
+                    <CommandItem
+                      key={`attorney-${assignee}`}
+                      onSelect={() => handleSearchSelect("attorney", assignee)}
+                      className="cursor-pointer"
+                    >
+                      <Mail className="mr-2 h-4 w-4" />
+                      <span>{assignee}</span>
+                      <Badge variant="secondary" className="ml-auto">
+                        {rules.length} {rules.length === 1 ? "rule" : "rules"}
+                      </Badge>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {/* Rules */}
+              {Object.entries(rulesByAssignee).map(([assignee, rules]) =>
+                rules.length > 0 ? (
+                  <CommandGroup key={assignee} heading={`Rules for ${assignee}`}>
+                    {rules.map((rule) => (
+                      <CommandItem
+                        key={`rule-${rule.id}`}
+                        onSelect={() => handleSearchSelect("rule", rule.id, assignee)}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{rule.name}</span>
+                            <Badge variant="outline" className="text-xs">
+                              Priority {rule.priority}
+                            </Badge>
+                            {!rule.enabled && (
+                              <Badge variant="secondary" className="text-xs">
+                                Disabled
+                              </Badge>
+                            )}
+                          </div>
+                          {rule.description && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {rule.description}
+                            </p>
+                          )}
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                ) : null
+              )}
+            </CommandList>
+          </Command>
+        </DialogContent>
+      </Dialog>
+
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -211,22 +337,36 @@ export default function ConfigurePage() {
               priority (higher first).
             </p>
           </div>
-          <Button
-            onClick={() => setShowAddAttorney(!showAddAttorney)}
-            variant="secondary"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {showAddAttorney ? "Cancel" : "Add Attorney"}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setSearchOpen(true)}
+              variant="outline"
+            >
+              <Search className="h-4 w-4 mr-2" />
+              Search
+              <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            </Button>
+            <Button
+              onClick={() => setShowAddAttorney(!showAddAttorney)}
+              variant="secondary"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {showAddAttorney ? "Cancel" : "Add Attorney"}
+            </Button>
+          </div>
         </div>
 
         {/* Add Attorney Form */}
         {showAddAttorney && (
           <Card className="mb-6">
             <CardContent className="pt-6">
-              <div className="flex gap-3">
-                <div className="flex-1">
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="attorney-email" className="mb-2">Attorney Email</Label>
                   <Input
+                    id="attorney-email"
                     type="email"
                     placeholder="attorney@example.com"
                     value={newAttorneyEmail}
@@ -237,15 +377,15 @@ export default function ConfigurePage() {
                       }
                     }}
                   />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Add a new attorney to create routing rules for them
+                  </p>
                 </div>
                 <Button onClick={addAttorney}>
                   <Mail className="h-4 w-4 mr-2" />
                   Add Attorney
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                Add a new attorney to create routing rules for them
-              </p>
             </CardContent>
           </Card>
         )}
@@ -259,7 +399,18 @@ export default function ConfigurePage() {
           );
 
           return (
-            <Card key={assignee}>
+            <Card
+              key={assignee}
+              ref={(el) => {
+                if (el) cardRefs.current.set(assignee, el);
+              }}
+              className={
+                highlightedItem?.type === "attorney" &&
+                highlightedItem?.id === assignee
+                  ? "ring-2 ring-primary transition-all"
+                  : ""
+              }
+            >
               <CardHeader
                 className="cursor-pointer"
                 onClick={() => toggleAssignee(assignee)}
@@ -301,38 +452,60 @@ export default function ConfigurePage() {
                     <div className="border rounded-lg p-4 bg-muted/20">
                       <div className="space-y-4">
                         <div className="flex gap-4">
+                          <div className="flex-1">
+                            <Label htmlFor={`create-rule-name-${assignee}`} className="mb-2">
+                              Rule Name
+                            </Label>
+                            <Input
+                              id={`create-rule-name-${assignee}`}
+                              placeholder="e.g., M&A Transactions, Employment Disputes"
+                              value={formData.name}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  name: e.target.value,
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="w-24">
+                            <Label htmlFor={`create-rule-priority-${assignee}`} className="mb-2">
+                              Priority
+                            </Label>
+                            <Input
+                              id={`create-rule-priority-${assignee}`}
+                              type="number"
+                              placeholder="10"
+                              value={formData.priority}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  priority: Number(e.target.value),
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label
+                            htmlFor={`create-rule-description-${assignee}`}
+                            className="mb-2"
+                          >
+                            Description (optional)
+                          </Label>
                           <Input
-                            placeholder="Rule name"
-                            value={formData.name}
-                            onChange={(e) =>
-                              setFormData({ ...formData, name: e.target.value })
-                            }
-                            className="flex-1"
-                          />
-                          <Input
-                            type="number"
-                            placeholder="Priority"
-                            value={formData.priority}
+                            id={`create-rule-description-${assignee}`}
+                            placeholder="e.g., Route all merger and acquisition requests to this attorney"
+                            value={formData.description}
                             onChange={(e) =>
                               setFormData({
                                 ...formData,
-                                priority: Number(e.target.value),
+                                description: e.target.value,
                               })
                             }
-                            className="w-24"
                           />
                         </div>
-
-                        <Input
-                          placeholder="Description (optional)"
-                          value={formData.description}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              description: e.target.value,
-                            })
-                          }
-                        />
 
                         <RuleBuilder
                           conditions={formData.conditions as Condition[]}
@@ -343,15 +516,13 @@ export default function ConfigurePage() {
 
                         <div className="flex gap-2">
                           <Button onClick={saveRule} size="sm">
-                            <Save className="h-4 w-4 mr-2" />
-                            Save Rule
+                            Save
                           </Button>
                           <Button
                             onClick={cancelEditing}
                             variant="outline"
                             size="sm"
                           >
-                            <X className="h-4 w-4 mr-2" />
                             Cancel
                           </Button>
                         </div>
@@ -363,48 +534,72 @@ export default function ConfigurePage() {
                   {sortedRules.map((rule) => (
                     <div
                       key={rule.id}
+                      ref={(el) => {
+                        if (el) cardRefs.current.set(rule.id, el);
+                      }}
                       className={`border rounded-lg p-4 ${
                         !rule.enabled ? "opacity-50" : ""
+                      } ${
+                        highlightedItem?.type === "rule" &&
+                        highlightedItem?.id === rule.id
+                          ? "ring-2 ring-primary transition-all"
+                          : ""
                       }`}
                     >
                       {editingRule === rule.id ? (
                         <div className="space-y-4">
                           <div className="flex gap-4">
-                            <Input
-                              placeholder="Rule name"
-                              value={formData.name}
-                              onChange={(e) =>
-                                setFormData({
-                                  ...formData,
-                                  name: e.target.value,
-                                })
-                              }
-                              className="flex-1"
-                            />
-                            <Input
-                              type="number"
-                              placeholder="Priority"
-                              value={formData.priority}
-                              onChange={(e) =>
-                                setFormData({
-                                  ...formData,
-                                  priority: Number(e.target.value),
-                                })
-                              }
-                              className="w-24"
-                            />
+                            <div className="flex-1">
+                              <Label htmlFor={`edit-rule-name-${rule.id}`} className="mb-2">
+                                Rule Name
+                              </Label>
+                              <Input
+                                id={`edit-rule-name-${rule.id}`}
+                                placeholder="e.g., M&A Transactions, Employment Disputes"
+                                value={formData.name}
+                                onChange={(e) =>
+                                  setFormData({
+                                    ...formData,
+                                    name: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+                            <div className="w-24">
+                              <Label htmlFor={`edit-rule-priority-${rule.id}`} className="mb-2">
+                                Priority
+                              </Label>
+                              <Input
+                                id={`edit-rule-priority-${rule.id}`}
+                                type="number"
+                                placeholder="10"
+                                value={formData.priority}
+                                onChange={(e) =>
+                                  setFormData({
+                                    ...formData,
+                                    priority: Number(e.target.value),
+                                  })
+                                }
+                              />
+                            </div>
                           </div>
 
-                          <Input
-                            placeholder="Description (optional)"
-                            value={formData.description}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                description: e.target.value,
-                              })
-                            }
-                          />
+                          <div>
+                            <Label htmlFor={`edit-rule-description-${rule.id}`} className="mb-2">
+                              Description (optional)
+                            </Label>
+                            <Input
+                              id={`edit-rule-description-${rule.id}`}
+                              placeholder="e.g., Route all merger and acquisition requests to this attorney"
+                              value={formData.description}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  description: e.target.value,
+                                })
+                              }
+                            />
+                          </div>
 
                           <RuleBuilder
                             conditions={formData.conditions as Condition[]}
@@ -415,7 +610,6 @@ export default function ConfigurePage() {
 
                           <div className="flex gap-2">
                             <Button onClick={saveRule} size="sm">
-                              <Save className="h-4 w-4 mr-2" />
                               Save
                             </Button>
                             <Button
@@ -423,7 +617,6 @@ export default function ConfigurePage() {
                               variant="outline"
                               size="sm"
                             >
-                              <X className="h-4 w-4 mr-2" />
                               Cancel
                             </Button>
                           </div>
@@ -493,7 +686,7 @@ export default function ConfigurePage() {
                                 <span className="text-muted-foreground">
                                   {formatOperator(condition.operator)}
                                 </span>
-                                <Badge>
+                                <Badge variant={"secondary"}>
                                   {formatConditionValue(
                                     condition.field,
                                     condition.value

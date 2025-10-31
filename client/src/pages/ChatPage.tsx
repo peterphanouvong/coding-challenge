@@ -196,7 +196,7 @@ export default function ChatPage() {
       {error && <div className="chat-error">{error}</div>}
 
       <form
-        className="chat-input flex-col border border-white/40 rounded-2xl p-2 shadow-[0px_8px_15px_0px_rgba(71,85,105,0.4)]"
+        className="chat-input flex-col border border-white/30 rounded-2xl p-2 shadow-[0px_8px_15px_0px_rgba(71,85,105,0.25)]"
         onSubmit={handleSubmit}
       >
         {showTemplate ? (
