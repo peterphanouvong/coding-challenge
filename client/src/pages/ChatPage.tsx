@@ -27,6 +27,8 @@ import {
   useState,
 } from "react";
 import { ClarificationForm } from "@/components/ClarificationForm";
+import { ActionButtons } from "@/components/ActionButtons";
+import { EditableSummary } from "@/components/EditableSummary";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8999";
@@ -44,11 +46,40 @@ interface UIComponentData {
   };
 }
 
+interface ActionButton {
+  type: "email" | "link" | "copy";
+  label: string;
+  email?: string;
+  subject?: string;
+  body?: string;
+  url?: string;
+  copyText?: string;
+}
+
+interface ActionData {
+  type: "action_buttons";
+  actions: ActionButton[];
+}
+
+interface SummaryField {
+  key: string;
+  label: string;
+  value: string | number;
+  editable: boolean;
+}
+
+interface SummaryData {
+  type: "editable_summary";
+  fields: SummaryField[];
+}
+
 interface ChatMessage {
   id: string;
   role: Role;
   content: string;
   uiComponent?: UIComponentData;
+  actions?: ActionData;
+  summary?: SummaryData;
 }
 
 const createMessage = (overrides?: Partial<ChatMessage>): ChatMessage => ({
@@ -130,6 +161,55 @@ export default function ChatPage() {
     }, 0);
   };
 
+  const handleSummaryRetry = (updatedFields: Record<string, string | number>) => {
+    // Format the updated fields into a user message
+    const parts: string[] = [];
+
+    if (updatedFields.requestType) {
+      const formatted = String(updatedFields.requestType)
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+      parts.push(`Request type: ${formatted}`);
+    }
+
+    if (updatedFields.location) {
+      const formatted = String(updatedFields.location)
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+      parts.push(`Location: ${formatted}`);
+    }
+
+    if (updatedFields.department) {
+      parts.push(`Department: ${updatedFields.department}`);
+    }
+
+    if (updatedFields.urgency) {
+      parts.push(`Urgency: ${updatedFields.urgency}`);
+    }
+
+    if (updatedFields.value) {
+      parts.push(`Value: $${updatedFields.value}`);
+    }
+
+    if (updatedFields.summary) {
+      parts.push(`Summary: ${updatedFields.summary}`);
+    }
+
+    // Create artificial form submit event
+    const artificialInput = parts.join(", ");
+    setInput(artificialInput);
+
+    // Trigger submission
+    setTimeout(() => {
+      const form = document.querySelector(".chat-input") as HTMLFormElement;
+      if (form) {
+        form.requestSubmit();
+      }
+    }, 0);
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const userText = showTemplate
@@ -188,65 +268,102 @@ export default function ChatPage() {
             /__UI_COMPONENT__(.*?)__END_UI__/s
           );
 
+          // Check for action button markers
+          const actionsMatch = assistantText.match(
+            /__ACTIONS__(.*?)__END_ACTIONS__/s
+          );
+
+          // Check for summary markers
+          const summaryMatch = assistantText.match(
+            /__SUMMARY__(.*?)__END_SUMMARY__/s
+          );
+
+          let hasUpdate = false;
+          const updates: Partial<ChatMessage> = {};
+
           if (uiComponentMatch) {
             try {
               const uiComponentData = JSON.parse(
                 uiComponentMatch[1]
               ) as UIComponentData;
 
+              updates.uiComponent = uiComponentData;
+
               // Remove the UI component marker from the text
-              const textBeforeComponent = assistantText.substring(
-                0,
-                uiComponentMatch.index
+              assistantText = assistantText.replace(
+                /__UI_COMPONENT__.*?__END_UI__/s,
+                ""
               );
-
-              // Update message with UI component
-              setMessages((prev) =>
-                prev.map((message) =>
-                  message.id === assistantMessage.id
-                    ? {
-                        ...message,
-                        content: textBeforeComponent,
-                        uiComponent: uiComponentData,
-                      }
-                    : message
-                )
-              );
-
-              // Reset assistantText to continue after the component
-              assistantText =
-                textBeforeComponent +
-                assistantText.substring(
-                  (uiComponentMatch.index || 0) + uiComponentMatch[0].length
-                );
+              hasUpdate = true;
             } catch (parseError) {
               console.error("Error parsing UI component:", parseError);
             }
-          } else {
-            // Regular text update
-            setMessages((prev) =>
-              prev.map((message) =>
-                message.id === assistantMessage.id
-                  ? { ...message, content: assistantText }
-                  : message
-              )
-            );
           }
+
+          if (actionsMatch) {
+            try {
+              const actionData = JSON.parse(actionsMatch[1]) as ActionData;
+
+              updates.actions = actionData;
+
+              // Remove the actions marker from the text
+              assistantText = assistantText.replace(
+                /__ACTIONS__.*?__END_ACTIONS__/s,
+                ""
+              );
+              hasUpdate = true;
+            } catch (parseError) {
+              console.error("Error parsing actions:", parseError);
+            }
+          }
+
+          if (summaryMatch) {
+            try {
+              const summaryData = JSON.parse(summaryMatch[1]) as SummaryData;
+
+              updates.summary = summaryData;
+
+              // Remove the summary marker from the text
+              assistantText = assistantText.replace(
+                /__SUMMARY__.*?__END_SUMMARY__/s,
+                ""
+              );
+              hasUpdate = true;
+            } catch (parseError) {
+              console.error("Error parsing summary:", parseError);
+            }
+          }
+
+          // Update message with any parsed components and cleaned content
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === assistantMessage.id
+                ? {
+                    ...message,
+                    content: assistantText,
+                    ...updates,
+                  }
+                : message
+            )
+          );
         }
       }
 
       assistantText += decoder.decode();
 
       // Final update (in case there's any remaining content)
+      // Clean up any markers that might remain
+      const cleanedContent = assistantText
+        .replace(/__UI_COMPONENT__.*?__END_UI__/gs, "")
+        .replace(/__ACTIONS__.*?__END_ACTIONS__/gs, "")
+        .replace(/__SUMMARY__.*?__END_SUMMARY__/gs, "");
+
       setMessages((prev) =>
         prev.map((message) =>
           message.id === assistantMessage.id
             ? {
                 ...message,
-                content: assistantText.replace(
-                  /__UI_COMPONENT__.*?__END_UI__/gs,
-                  ""
-                ),
+                content: cleanedContent,
               }
             : message
         )
@@ -294,6 +411,13 @@ export default function ChatPage() {
                 onSubmit={handleClarificationSubmit}
               />
             )}
+            {message.summary && (
+              <EditableSummary
+                data={message.summary}
+                onRetry={handleSummaryRetry}
+              />
+            )}
+            {message.actions && <ActionButtons data={message.actions} />}
           </div>
         ))}
         <div ref={messagesEndRef} />

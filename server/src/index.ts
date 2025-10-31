@@ -568,6 +568,82 @@ IMPORTANT: Users are NOT lawyers. Use simple language. `,
                   (word: string) => word.charAt(0).toUpperCase() + word.slice(1)
                 )
                 .join(" ");
+              const locationFormatted = args.location
+                .split("_")
+                .map(
+                  (word: string) => word.charAt(0).toUpperCase() + word.slice(1)
+                )
+                .join(" ");
+
+              // Build editable summary component
+              const summaryFields = [
+                {
+                  key: "requestType",
+                  label: "Request Type",
+                  value: args.requestType,
+                  editable: true,
+                },
+                {
+                  key: "location",
+                  label: "Location",
+                  value: args.location,
+                  editable: true,
+                },
+              ];
+
+              if (args.department) {
+                summaryFields.push({
+                  key: "department",
+                  label: "Department",
+                  value: args.department,
+                  editable: true,
+                });
+              }
+              if (args.urgency) {
+                summaryFields.push({
+                  key: "urgency",
+                  label: "Urgency",
+                  value: args.urgency,
+                  editable: true,
+                });
+              }
+              if (args.value) {
+                summaryFields.push({
+                  key: "value",
+                  label: "Value",
+                  value: args.value,
+                  editable: true,
+                });
+              }
+              if (args.summary) {
+                summaryFields.push({
+                  key: "summary",
+                  label: "Summary",
+                  value: args.summary,
+                  editable: true,
+                });
+              }
+
+              const summaryComponent = {
+                type: "editable_summary",
+                fields: summaryFields,
+              };
+
+              // Build action buttons for successful match
+              const actions = {
+                type: "action_buttons",
+                actions: [
+                  {
+                    type: "email",
+                    label: `Email ${decision.assignTo}`,
+                    email: decision.assignTo,
+                    subject: `Legal Request: ${requestTypeFormatted}`,
+                    body: `Hi,\n\nI have a ${requestTypeFormatted.toLowerCase()} request that I'd like to discuss.\n\n${
+                      args.summary
+                    }\n\nThank you!`,
+                  },
+                ],
+              };
 
               res.write(
                 `## ✅ We've got you covered!\n\n` +
@@ -579,87 +655,132 @@ IMPORTANT: Users are NOT lawyers. Use simple language. `,
                   (decision.confidence && decision.confidence < 100
                     ? `*This routing is based on the information provided (${decision.confidence}% match).*\n\n`
                     : "") +
-                  `---`
+                  `__SUMMARY__${JSON.stringify(summaryComponent)}__END_SUMMARY__` +
+                  `__ACTIONS__${JSON.stringify(actions)}__END_ACTIONS__`
               );
             } else if (decision.needsClarification) {
-              // Build summary of what we know so far
-              const knownInfo: string[] = [];
+              // Build editable summary for clarification case
+              const summaryFields = [];
               if (args.requestType) {
-                const requestTypeFormatted = args.requestType
-                  .split("_")
-                  .map(
-                    (word: string) =>
-                      word.charAt(0).toUpperCase() + word.slice(1)
-                  )
-                  .join(" ");
-                knownInfo.push(`**Request type:** ${requestTypeFormatted}`);
+                summaryFields.push({
+                  key: "requestType",
+                  label: "Request Type",
+                  value: args.requestType,
+                  editable: true,
+                });
               }
               if (args.location) {
-                const locationFormatted = args.location
-                  .split("_")
-                  .map(
-                    (word: string) =>
-                      word.charAt(0).toUpperCase() + word.slice(1)
-                  )
-                  .join(" ");
-                knownInfo.push(`**Location:** ${locationFormatted}`);
+                summaryFields.push({
+                  key: "location",
+                  label: "Location",
+                  value: args.location,
+                  editable: true,
+                });
               }
               if (args.department) {
-                knownInfo.push(`**Department:** ${args.department}`);
+                summaryFields.push({
+                  key: "department",
+                  label: "Department",
+                  value: args.department,
+                  editable: true,
+                });
               }
               if (args.urgency) {
-                knownInfo.push(`**Urgency:** ${args.urgency}`);
+                summaryFields.push({
+                  key: "urgency",
+                  label: "Urgency",
+                  value: args.urgency,
+                  editable: true,
+                });
               }
               if (args.value) {
-                knownInfo.push(`**Value:** $${args.value.toLocaleString()}`);
+                summaryFields.push({
+                  key: "value",
+                  label: "Value",
+                  value: args.value,
+                  editable: true,
+                });
               }
+
+              const summaryComponent =
+                summaryFields.length > 0
+                  ? {
+                      type: "editable_summary",
+                      fields: summaryFields,
+                    }
+                  : null;
 
               res.write(
                 `## 🤔 Just need a bit more info\n\n` +
-                  (knownInfo.length > 0
-                    ? `**What I have so far:**\n${knownInfo.join("\n")}\n\n`
+                  (summaryComponent
+                    ? `__SUMMARY__${JSON.stringify(
+                        summaryComponent
+                      )}__END_SUMMARY__\n\n`
                     : "") +
-                  `${decision.needsClarification.questions.map(
-                    (question) => `${question}\n`
-                  )}\n\n` +
+                  `${decision.needsClarification.questions
+                    .map((question) => `${question}\n`)
+                    .join("")}\n\n` +
                   `---`
               );
             } else {
-              // Build summary of what we gathered
-              const requestTypeFormatted = args.requestType
-                .split("_")
-                .map(
-                  (word: string) => word.charAt(0).toUpperCase() + word.slice(1)
-                )
-                .join(" ");
-              const locationFormatted = args.location
-                .split("_")
-                .map(
-                  (word: string) => word.charAt(0).toUpperCase() + word.slice(1)
-                )
-                .join(" ");
-
-              const summary: string[] = [
-                `**Request type:** ${requestTypeFormatted}`,
-                `**Location:** ${locationFormatted}`,
+              // Build editable summary for fallback case
+              const summaryFields = [
+                {
+                  key: "requestType",
+                  label: "Request Type",
+                  value: args.requestType,
+                  editable: true,
+                },
+                {
+                  key: "location",
+                  label: "Location",
+                  value: args.location,
+                  editable: true,
+                },
               ];
+
               if (args.department) {
-                summary.push(`**Department:** ${args.department}`);
+                summaryFields.push({
+                  key: "department",
+                  label: "Department",
+                  value: args.department,
+                  editable: true,
+                });
               }
               if (args.urgency) {
-                summary.push(`**Urgency:** ${args.urgency}`);
+                summaryFields.push({
+                  key: "urgency",
+                  label: "Urgency",
+                  value: args.urgency,
+                  editable: true,
+                });
               }
               if (args.value) {
-                summary.push(`**Value:** $${args.value.toLocaleString()}`);
+                summaryFields.push({
+                  key: "value",
+                  label: "Value",
+                  value: args.value,
+                  editable: true,
+                });
               }
               if (args.summary) {
-                summary.push(`**Summary:** ${args.summary}`);
+                summaryFields.push({
+                  key: "summary",
+                  label: "Summary",
+                  value: args.summary,
+                  editable: true,
+                });
               }
+
+              const summaryComponent = {
+                type: "editable_summary",
+                fields: summaryFields,
+              };
 
               res.write(
                 `## 👋 We'll take it from here\n\n` +
                   `I couldn't find a specific team member for this request, but don't worry! I've forwarded it to our general legal team at **legal-general@acme.corp** who will make sure it gets to the right person.\n\n` +
-                  `**Information captured:**\n${summary.join("\n")}\n\n` +
+                  `__SUMMARY__${JSON.stringify(summaryComponent)}__END_SUMMARY__\n\n` +
                   `Someone will be in touch shortly.\n\n` +
                   `---`
               );
