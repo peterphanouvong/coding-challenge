@@ -78,6 +78,51 @@ const extractRequestSchema = z.object({
   urgency: z.enum(["low", "medium", "high"]).optional(),
 });
 
+// Function definition for requesting clarification via UI
+const requestClarificationTool: OpenAI.Chat.Completions.ChatCompletionTool = {
+  type: "function",
+  function: {
+    name: "request_clarification_ui",
+    description:
+      "Call this immediately when you cannot determine the request type or location from the user's message. Shows an interactive form to the user.",
+    parameters: {
+      type: "object",
+      properties: {
+        missingFields: {
+          type: "array",
+          items: {
+            type: "string",
+            enum: ["requestType", "location"],
+          },
+          description: "Which fields need clarification",
+        },
+        contextMessage: {
+          type: "string",
+          description:
+            "Brief message to show before the form (e.g., 'I need a bit more information to route your request')",
+        },
+        inferredRequestType: {
+          type: "string",
+          enum: [
+            "contracts",
+            "employment_hr",
+            "litigation_disputes",
+            "intellectual_property",
+            "regulatory_compliance",
+            "corporate_ma",
+            "real_estate",
+            "privacy_data",
+            "general_advice",
+          ],
+          description:
+            "Your best guess for the request type, will be pre-selected in the form",
+        },
+      },
+      required: ["missingFields", "contextMessage"],
+    },
+  },
+};
+
 // Function definition for the AI agent to extract information
 const extractInfoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
   type: "function",
@@ -311,13 +356,13 @@ app.post("/api/chat", async (req: Request, res: Response) => {
       role: "system",
       content: `You are a legal triage assistant for Acme Corp. Your job is to quickly connect employees with the right legal team member.
 
-CRITICAL: Call extract_request_info as soon as you can reasonably infer the request type and location. Don't ask unnecessary questions.
-
-PROCESS:
-1. Read the user's message and immediately infer the request type and location if possible
-2. Ask clarifying question if both requestType OR location are unclear
-3. If you can make a reasonable inference about the requestType AND location, call extract_request_info 
-4. The rule engine will find the best match - your job is just to extract basic info quickly
+CRITICAL PROCESS:
+1. Read the user's first message
+2. If you can confidently infer BOTH requestType AND location, immediately call extract_request_info
+3. If you CANNOT determine requestType OR location, immediately call request_clarification_ui to show an interactive form
+   - ALWAYS include your best guess as inferredRequestType (even if not 100% confident)
+   - The form will pre-select this and allow users to change it or provide a custom description
+4. DO NOT ask text-based clarifying questions about requestType or location - always use the form
 
 REQUEST TYPES (infer from context):
 - contracts: agreements, NDAs, terms, vendor contracts
@@ -330,8 +375,14 @@ REQUEST TYPES (infer from context):
 - privacy_data: data privacy, GDPR, security breaches
 - general_advice: anything unclear or general
 
-LOCATIONS (infer DO NOT assume, please ask clarifyuing questions):
+LOCATIONS:
 - australia, united states, united kingdom, canada, europe, asia_pacific, other
+
+TOOL USAGE:
+- Use request_clarification_ui when requestType OR location cannot be inferred
+  * Include inferredRequestType with your best guess (helps users)
+  * Set contextMessage to briefly explain what you need
+- Use extract_request_info when you have both requestType AND location
 
 IMPORTANT: Users are NOT lawyers. Use simple language. `,
     },
@@ -348,7 +399,7 @@ IMPORTANT: Users are NOT lawyers. Use simple language. `,
     const stream = await openai.chat.completions.create({
       model: "gpt-4o-mini", // Use a model that supports function calling
       messages: chatMessages,
-      tools: [extractInfoTool],
+      tools: [requestClarificationTool, extractInfoTool],
       tool_choice: "auto",
       stream: true,
       temperature: 0.1,
@@ -405,7 +456,89 @@ IMPORTANT: Users are NOT lawyers. Use simple language. `,
 
       // If the finish reason is tool_calls, execute the function
       if (chunk.choices[0]?.finish_reason === "tool_calls") {
-        if (toolCallName === "extract_request_info") {
+        if (toolCallName === "request_clarification_ui") {
+          try {
+            const args = JSON.parse(toolCallArgs);
+
+            // Send UI component marker with form specification
+            const uiComponent = {
+              type: "clarification_form",
+              fields: args.missingFields || ["requestType", "location"],
+              contextMessage: args.contextMessage,
+              inferredRequestType: args.inferredRequestType,
+              options: {
+                requestType: [
+                  {
+                    value: "contracts",
+                    label: "Contracts & Agreements",
+                    description: "NDAs, vendor contracts, terms & conditions",
+                  },
+                  {
+                    value: "employment_hr",
+                    label: "Employment & HR",
+                    description: "Hiring, termination, workplace issues",
+                  },
+                  {
+                    value: "litigation_disputes",
+                    label: "Litigation & Disputes",
+                    description: "Lawsuits, legal threats, disputes",
+                  },
+                  {
+                    value: "intellectual_property",
+                    label: "Intellectual Property",
+                    description: "Patents, trademarks, copyrights",
+                  },
+                  {
+                    value: "regulatory_compliance",
+                    label: "Regulatory & Compliance",
+                    description: "Regulations, licenses, compliance",
+                  },
+                  {
+                    value: "corporate_ma",
+                    label: "Corporate & M&A",
+                    description: "Fundraising, acquisitions, investments",
+                  },
+                  {
+                    value: "real_estate",
+                    label: "Real Estate",
+                    description: "Property, leases, office space",
+                  },
+                  {
+                    value: "privacy_data",
+                    label: "Privacy & Data",
+                    description: "Data privacy, GDPR, security breaches",
+                  },
+                  {
+                    value: "general_advice",
+                    label: "General Legal Advice",
+                    description: "General questions or unclear requests",
+                  },
+                ],
+                location: [
+                  { value: "australia", label: "Australia" },
+                  { value: "united states", label: "United States" },
+                  { value: "united kingdom", label: "United Kingdom" },
+                  { value: "canada", label: "Canada" },
+                  { value: "europe", label: "Europe" },
+                  { value: "asia_pacific", label: "Asia Pacific" },
+                  { value: "other", label: "Other" },
+                ],
+              },
+            };
+
+            res.write(
+              `__UI_COMPONENT__${JSON.stringify(uiComponent)}__END_UI__`
+            );
+          } catch (parseError) {
+            console.error(
+              "Error parsing clarification tool call:",
+              parseError
+            );
+            res.write(
+              "\n\nCould you please tell me more about your request and where you're located?"
+            );
+          }
+        } else if (toolCallName === "extract_request_info") {
           try {
             const args = JSON.parse(toolCallArgs);
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -9,271 +10,154 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Send } from "lucide-react";
-import type { RequestType, Location } from "@/types/rules";
-import {
-  REQUEST_TYPE_LABELS,
-  REQUEST_TYPE_DESCRIPTIONS,
-} from "@/lib/formatters";
+import { formatRequestType } from "@/lib/formatters";
+import { RequestType } from "@/types";
 
-interface ClarificationField {
-  name: string;
-  required: boolean;
+interface UIComponentData {
+  type: "clarification_form";
+  fields: string[];
+  contextMessage: string;
+  inferredRequestType?: string;
+  options: {
+    requestType?: Array<{ value: string; label: string; description: string }>;
+    location?: Array<{ value: string; label: string }>;
+  };
 }
 
 interface ClarificationFormProps {
-  message: string;
-  fields: ClarificationField[];
-  onSubmit: (data: Record<string, any>) => void;
+  data: UIComponentData;
+  onSubmit: (selections: {
+    requestType?: string;
+    location?: string;
+    customDescription?: string;
+  }) => void;
 }
 
-const REQUEST_TYPES: RequestType[] = [
-  "contracts",
-  "employment_hr",
-  "litigation_disputes",
-  "intellectual_property",
-  "regulatory_compliance",
-  "corporate_ma",
-  "real_estate",
-  "privacy_data",
-  "general_advice",
-];
+export function ClarificationForm({ data, onSubmit }: ClarificationFormProps) {
+  const [selectedRequestType, setSelectedRequestType] = useState<
+    string | undefined
+  >(data.inferredRequestType);
+  const [selectedLocation, setSelectedLocation] = useState<string | undefined>(
+    undefined
+  );
+  const [useCustomDescription, setUseCustomDescription] = useState(false);
+  const [customDescription, setCustomDescription] = useState("");
 
-const LOCATIONS: Location[] = [
-  "australia",
-  "united states",
-  "united kingdom",
-  "canada",
-  "europe",
-  "asia_pacific",
-  "other",
-];
+  const needsRequestType = data.fields.includes("requestType");
+  const needsLocation = data.fields.includes("location");
 
-export function ClarificationForm({
-  message,
-  fields,
-  onSubmit,
-}: ClarificationFormProps) {
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const canSubmit =
+    (!needsRequestType ||
+      selectedRequestType ||
+      (useCustomDescription && customDescription.trim())) &&
+    (!needsLocation || selectedLocation);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Check required fields
-    const requiredFields = fields.filter((f) => f.required);
-    const allRequiredFilled = requiredFields.every((f) => formData[f.name]);
-
-    if (allRequiredFilled) {
-      onSubmit(formData);
-    }
+  const handleSubmit = () => {
+    onSubmit({
+      requestType: useCustomDescription ? undefined : selectedRequestType,
+      location: selectedLocation,
+      customDescription: useCustomDescription ? customDescription : undefined,
+    });
   };
-
-  const formatLocation = (loc: string) => {
-    return loc
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-  };
-
-  const renderField = (field: ClarificationField) => {
-    const fieldName = field.name;
-
-    if (fieldName === "requestType") {
-      return (
-        <div key={fieldName} className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            Request Type
-            {field.required && (
-              <Badge variant="destructive" className="text-xs">
-                Required
-              </Badge>
-            )}
-          </label>
-          <Select
-            value={formData[fieldName] || ""}
-            onValueChange={(value) =>
-              setFormData({ ...formData, [fieldName]: value })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select type..." />
-            </SelectTrigger>
-            <SelectContent>
-              {REQUEST_TYPES.map((type) => (
-                <SelectItem key={type} value={type}>
-                  <div className="flex flex-col py-1">
-                    <span className="font-medium">
-                      {REQUEST_TYPE_LABELS[type]}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {REQUEST_TYPE_DESCRIPTIONS[type]}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      );
-    }
-
-    if (fieldName === "location") {
-      return (
-        <div key={fieldName} className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            Location
-            {field.required && (
-              <Badge variant="destructive" className="text-xs">
-                Required
-              </Badge>
-            )}
-          </label>
-          <Select
-            value={formData[fieldName] || ""}
-            onValueChange={(value) =>
-              setFormData({ ...formData, [fieldName]: value })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select location..." />
-            </SelectTrigger>
-            <SelectContent>
-              {LOCATIONS.map((loc) => (
-                <SelectItem key={loc} value={loc}>
-                  {formatLocation(loc)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      );
-    }
-
-    if (fieldName === "value") {
-      return (
-        <div key={fieldName} className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            Contract Value
-            {field.required && (
-              <Badge variant="destructive" className="text-xs">
-                Required
-              </Badge>
-            )}
-          </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-              $
-            </span>
-            <Input
-              type="number"
-              value={formData[fieldName] || ""}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  [fieldName]: e.target.value
-                    ? Number(e.target.value)
-                    : undefined,
-                })
-              }
-              placeholder="100000"
-              className="pl-7"
-            />
-          </div>
-        </div>
-      );
-    }
-
-    if (fieldName === "department") {
-      return (
-        <div key={fieldName} className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            Department
-            {field.required && (
-              <Badge variant="destructive" className="text-xs">
-                Required
-              </Badge>
-            )}
-          </label>
-          <Input
-            value={formData[fieldName] || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, [fieldName]: e.target.value })
-            }
-            placeholder="e.g., Engineering, Sales"
-          />
-        </div>
-      );
-    }
-
-    if (fieldName === "urgency") {
-      return (
-        <div key={fieldName} className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            Urgency
-            {field.required && (
-              <Badge variant="destructive" className="text-xs">
-                Required
-              </Badge>
-            )}
-          </label>
-          <Select
-            value={formData[fieldName] || ""}
-            onValueChange={(value) =>
-              setFormData({ ...formData, [fieldName]: value })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select urgency..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="low">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-chart-4" />
-                  Low - Can wait
-                </div>
-              </SelectItem>
-              <SelectItem value="medium">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-chart-5" />
-                  Medium - This week
-                </div>
-              </SelectItem>
-              <SelectItem value="high">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-destructive" />
-                  High - Urgent
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      );
-    }
-
-    return null;
-  };
-
-  const requiredFields = fields.filter((f) => f.required);
-  const allRequiredFilled = requiredFields.every((f) => formData[f.name]);
 
   return (
-    <div className="border rounded-lg p-4 bg-muted/20 space-y-4">
-      <p className="text-sm">{message}</p>
+    <div className="border border-white/30 rounded-2xl p-4 bg-white/5 space-y-4 my-4">
+      {data.contextMessage && (
+        <p className="text-white/90 text-lg font-medium mb-4">
+          {data.contextMessage}
+        </p>
+      )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {fields.map(renderField)}
+      {needsRequestType && data.options.requestType && (
+        <div className="space-y-3 mt-4">
+          {!useCustomDescription ? (
+            <>
+              <Label htmlFor="request-type" className="text-white/90">
+                What type of legal request is this?
+              </Label>
+              <Select
+                value={selectedRequestType}
+                onValueChange={setSelectedRequestType}
+              >
+                <SelectTrigger id="request-type" className="w-full">
+                  <SelectValue placeholder="Select request type...">
+                    {formatRequestType(selectedRequestType as RequestType)}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {data.options.requestType.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      <div className="flex flex-col items-start py-1">
+                        <span className="font-medium text-white">
+                          {type.label}
+                        </span>
+                        <span className="text-xs text-white/60">
+                          {type.description}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <button
+                type="button"
+                onClick={() => setUseCustomDescription(true)}
+                className="text-xs text-white/60 hover:text-white/90 underline"
+              >
+                Not sure? Describe your request instead
+              </button>
+            </>
+          ) : (
+            <>
+              <Label htmlFor="custom-description" className="text-white/90">
+                Describe your legal request
+              </Label>
+              <Input
+                id="custom-description"
+                value={customDescription}
+                onChange={(e) => setCustomDescription(e.target.value)}
+                placeholder="e.g., I need help with a vendor agreement..."
+                className="bg-white/10 border-white/30 text-white placeholder:text-white/40"
+              />
+              <button
+                type="button"
+                onClick={() => setUseCustomDescription(false)}
+                className="text-xs text-white/60 hover:text-white/90 underline"
+              >
+                Choose from categories instead
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
-        <Button type="submit" disabled={!allRequiredFilled} className="w-full">
-          <Send className="h-4 w-4 mr-2" />
+      {needsLocation && data.options.location && (
+        <div className="space-y-3">
+          <Label className="text-white/90">What's your location?</Label>
+          <div className="flex flex-wrap gap-2">
+            {data.options.location.map((loc) => (
+              <Badge
+                key={loc.value}
+                variant={selectedLocation === loc.value ? "default" : "outline"}
+                className={`cursor-pointer transition-all ${
+                  selectedLocation === loc.value
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-white/10"
+                }`}
+                onClick={() => setSelectedLocation(loc.value)}
+              >
+                {loc.label}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end pt-2">
+        <Button onClick={handleSubmit} disabled={!canSubmit} size="sm">
           Submit
         </Button>
-
-        {!allRequiredFilled && (
-          <p className="text-xs text-center text-muted-foreground">
-            Please fill in all required fields
-          </p>
-        )}
-      </form>
+      </div>
     </div>
   );
 }

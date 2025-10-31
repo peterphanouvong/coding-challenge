@@ -26,16 +26,29 @@ import {
   useRef,
   useState,
 } from "react";
+import { ClarificationForm } from "@/components/ClarificationForm";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8999";
 
 type Role = "user" | "assistant";
 
+interface UIComponentData {
+  type: "clarification_form";
+  fields: string[];
+  contextMessage: string;
+  inferredRequestType?: string;
+  options: {
+    requestType?: Array<{ value: string; label: string; description: string }>;
+    location?: Array<{ value: string; label: string }>;
+  };
+}
+
 interface ChatMessage {
   id: string;
   role: Role;
   content: string;
+  uiComponent?: UIComponentData;
 }
 
 const createMessage = (overrides?: Partial<ChatMessage>): ChatMessage => ({
@@ -76,6 +89,45 @@ export default function ChatPage() {
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     setInput(event.target.value);
+  };
+
+  const handleClarificationSubmit = (selections: {
+    requestType?: string;
+    location?: string;
+    customDescription?: string;
+  }) => {
+    // Format the selections into a user message
+    const parts: string[] = [];
+
+    if (selections.customDescription) {
+      parts.push(selections.customDescription);
+    } else if (selections.requestType) {
+      const formatted = selections.requestType
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+      parts.push(`Request type: ${formatted}`);
+    }
+
+    if (selections.location) {
+      const formatted = selections.location
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+      parts.push(`Location: ${formatted}`);
+    }
+
+    // Create artificial form submit event
+    const artificialInput = parts.join(", ");
+    setInput(artificialInput);
+
+    // Trigger submission
+    setTimeout(() => {
+      const form = document.querySelector(".chat-input") as HTMLFormElement;
+      if (form) {
+        form.requestSubmit();
+      }
+    }, 0);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -131,23 +183,71 @@ export default function ChatPage() {
         if (value) {
           assistantText += decoder.decode(value, { stream: true });
 
-          // Regular text update
-          setMessages((prev) =>
-            prev.map((message) =>
-              message.id === assistantMessage.id
-                ? { ...message, content: assistantText }
-                : message
-            )
+          // Check for UI component markers
+          const uiComponentMatch = assistantText.match(
+            /__UI_COMPONENT__(.*?)__END_UI__/s
           );
+
+          if (uiComponentMatch) {
+            try {
+              const uiComponentData = JSON.parse(
+                uiComponentMatch[1]
+              ) as UIComponentData;
+
+              // Remove the UI component marker from the text
+              const textBeforeComponent = assistantText.substring(
+                0,
+                uiComponentMatch.index
+              );
+
+              // Update message with UI component
+              setMessages((prev) =>
+                prev.map((message) =>
+                  message.id === assistantMessage.id
+                    ? {
+                        ...message,
+                        content: textBeforeComponent,
+                        uiComponent: uiComponentData,
+                      }
+                    : message
+                )
+              );
+
+              // Reset assistantText to continue after the component
+              assistantText =
+                textBeforeComponent +
+                assistantText.substring(
+                  (uiComponentMatch.index || 0) + uiComponentMatch[0].length
+                );
+            } catch (parseError) {
+              console.error("Error parsing UI component:", parseError);
+            }
+          } else {
+            // Regular text update
+            setMessages((prev) =>
+              prev.map((message) =>
+                message.id === assistantMessage.id
+                  ? { ...message, content: assistantText }
+                  : message
+              )
+            );
+          }
         }
       }
 
       assistantText += decoder.decode();
 
+      // Final update (in case there's any remaining content)
       setMessages((prev) =>
         prev.map((message) =>
           message.id === assistantMessage.id
-            ? { ...message, content: assistantText }
+            ? {
+                ...message,
+                content: assistantText.replace(
+                  /__UI_COMPONENT__.*?__END_UI__/gs,
+                  ""
+                ),
+              }
             : message
         )
       );
@@ -188,6 +288,12 @@ export default function ChatPage() {
                   (message.role === "assistant" && isStreaming ? "…" : "")}
               </Markdown>
             </p>
+            {message.uiComponent && (
+              <ClarificationForm
+                data={message.uiComponent}
+                onSubmit={handleClarificationSubmit}
+              />
+            )}
           </div>
         ))}
         <div ref={messagesEndRef} />
