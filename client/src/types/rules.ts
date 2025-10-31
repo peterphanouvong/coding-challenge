@@ -1,4 +1,3 @@
-// Core domain types
 export type RequestType =
   | "contracts"              // NDAs, customer agreements, vendor contracts
   | "employment_hr"          // Hiring, terminations, workplace issues
@@ -18,12 +17,14 @@ export type Location =
   | "europe"
   | "asia_pacific"
   | "other";
+
 export type ConditionOperator =
   | "equals"
   | "contains"
   | "greater_than"
   | "less_than"
   | "not_equals";
+
 export type ConditionField =
   | "requestType"
   | "location"
@@ -53,42 +54,6 @@ export interface Rule {
   matchCount?: number; // For analytics
 }
 
-export interface ExtractedInfo {
-  requestType?: RequestType;
-  location?: Location;
-  value?: number;
-  department?: string;
-  urgency?: "low" | "medium" | "high";
-  rawText: string;
-}
-
-export interface RoutingDecision {
-  matched: boolean;
-  assignTo?: string;
-  confidence: number; // 0-100
-  matchedRule?: Rule;
-  extractedInfo: ExtractedInfo;
-  reasoning: string;
-  needsClarification?: {
-    missingFields: ConditionField[];
-    question: string;
-  };
-}
-
-export interface ChatMessage {
-  role: "user" | "assistant" | "system";
-  content: string;
-  timestamp: number;
-  metadata?: {
-    extractedInfo?: ExtractedInfo;
-    routingDecision?: RoutingDecision;
-  };
-}
-
-export interface Conversation {
-  id: string;
-  messages: ChatMessage[];
-  extractedInfo: Partial<ExtractedInfo>;
-  routingDecision?: RoutingDecision;
-  createdAt: number;
+export interface RulesByAssignee {
+  [email: string]: Rule[];
 }

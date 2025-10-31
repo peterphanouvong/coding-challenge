@@ -3,11 +3,9 @@ import dotenv from "dotenv";
 import express, { Request, Response } from "express";
 import cors from "cors";
 import OpenAI from "openai";
-import {
-  ResponseInput,
-  ResponseStreamEvent,
-} from "openai/resources/responses/responses";
-import { Stream } from "openai/core/streaming";
+import { RuleEngine } from "./services/ruleEngine";
+import { seedRules } from "./seed-data";
+import { ExtractedInfo, RoutingDecision } from "./types";
 
 // Load environment variables from the project root first, then allow local overrides in server/.env
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
@@ -30,6 +28,10 @@ const openai = new OpenAI({
   baseURL: process.env.OPENAI_BASE_URL,
 });
 
+// Initialize rule engine with seed data
+const ruleEngine = new RuleEngine();
+let currentRules = [...seedRules]; // In production, load from database
+
 type ChatCompletionMessageParam =
   OpenAI.Chat.Completions.ChatCompletionMessageParam;
 type StreamChunk = OpenAI.Chat.Completions.ChatCompletionChunk;
@@ -46,6 +48,66 @@ const allowedRoles: ReadonlySet<BasicRole> = new Set<BasicRole>([
   "user",
   "assistant",
 ]);
+
+// Function definition for the AI agent to extract information
+const extractInfoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
+  type: "function",
+  function: {
+    name: "extract_request_info",
+    description: "Extracts structured information from the user's legal request. Call this function when you have gathered ALL required information. The rule engine will determine the routing based on this extracted information.",
+    parameters: {
+      type: "object",
+      properties: {
+        requestType: {
+          type: "string",
+          enum: [
+            "contracts",
+            "employment_hr",
+            "litigation_disputes",
+            "intellectual_property",
+            "regulatory_compliance",
+            "corporate_ma",
+            "real_estate",
+            "privacy_data",
+            "general_advice"
+          ],
+          description: "The type of legal request",
+        },
+        location: {
+          type: "string",
+          enum: [
+            "australia",
+            "united states",
+            "united kingdom",
+            "canada",
+            "europe",
+            "asia_pacific",
+            "other"
+          ],
+          description: "The geographic location of the requestor (use lowercase)",
+        },
+        value: {
+          type: "number",
+          description: "The contract value if applicable (optional)",
+        },
+        department: {
+          type: "string",
+          description: "The department making the request (optional)",
+        },
+        urgency: {
+          type: "string",
+          enum: ["low", "medium", "high"],
+          description: "How urgent is the request (optional)",
+        },
+        summary: {
+          type: "string",
+          description: "A brief summary of the request for context",
+        },
+      },
+      required: ["requestType", "location", "summary"],
+    },
+  },
+};
 
 const sanitizeMessages = (messages: unknown): BasicMessage[] => {
   if (!Array.isArray(messages)) {
@@ -81,6 +143,119 @@ app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok" });
 });
 
+// Rule Management API Endpoints
+
+// GET all rules
+app.get("/api/rules", (_req: Request, res: Response) => {
+  res.json(currentRules);
+});
+
+// GET rules grouped by assignee
+app.get("/api/rules/by-assignee", (_req: Request, res: Response) => {
+  const grouped = currentRules.reduce((acc, rule) => {
+    const assignee = rule.action.assignTo;
+    if (!acc[assignee]) {
+      acc[assignee] = [];
+    }
+    acc[assignee].push(rule);
+    return acc;
+  }, {} as Record<string, typeof currentRules>);
+
+  res.json(grouped);
+});
+
+// GET unique attorneys/assignees
+app.get("/api/attorneys", (_req: Request, res: Response) => {
+  const attorneys = [...new Set(currentRules.map((r) => r.action.assignTo))];
+  res.json(attorneys);
+});
+
+// GET single rule by ID
+app.get("/api/rules/:id", (req: Request, res: Response) => {
+  const rule = currentRules.find((r) => r.id === req.params.id);
+  if (!rule) {
+    res.status(404).json({ error: "Rule not found" });
+    return;
+  }
+  res.json(rule);
+});
+
+// POST create new rule
+app.post("/api/rules", (req: Request, res: Response) => {
+  const newRule = req.body;
+
+  // Validate required fields
+  if (!newRule.name || !newRule.conditions || !newRule.action?.assignTo) {
+    res.status(400).json({ error: "Missing required fields" });
+    return;
+  }
+
+  // Generate ID if not provided
+  if (!newRule.id) {
+    newRule.id = `rule-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
+  // Set defaults
+  newRule.enabled = newRule.enabled !== false;
+  newRule.priority = newRule.priority || 1;
+  newRule.createdAt = new Date().toISOString();
+  newRule.matchCount = 0;
+
+  currentRules.push(newRule);
+  res.status(201).json(newRule);
+});
+
+// PUT update existing rule
+app.put("/api/rules/:id", (req: Request, res: Response) => {
+  const index = currentRules.findIndex((r) => r.id === req.params.id);
+
+  if (index === -1) {
+    res.status(404).json({ error: "Rule not found" });
+    return;
+  }
+
+  const updatedRule = {
+    ...currentRules[index],
+    ...req.body,
+    id: req.params.id, // Prevent ID changes
+  };
+
+  currentRules[index] = updatedRule;
+  res.json(updatedRule);
+});
+
+// DELETE rule
+app.delete("/api/rules/:id", (req: Request, res: Response) => {
+  const index = currentRules.findIndex((r) => r.id === req.params.id);
+
+  if (index === -1) {
+    res.status(404).json({ error: "Rule not found" });
+    return;
+  }
+
+  currentRules.splice(index, 1);
+  res.status(204).send();
+});
+
+// POST test a rule against sample data
+app.post("/api/rules/:id/test", (req: Request, res: Response) => {
+  const rule = currentRules.find((r) => r.id === req.params.id);
+
+  if (!rule) {
+    res.status(404).json({ error: "Rule not found" });
+    return;
+  }
+
+  const extractedInfo = req.body.extractedInfo;
+  if (!extractedInfo) {
+    res.status(400).json({ error: "Missing extractedInfo in request body" });
+    return;
+  }
+
+  const result = ruleEngine.testRule(rule, extractedInfo);
+  res.json(result);
+});
+
 app.post("/api/chat", async (req: Request, res: Response) => {
   if (!process.env.OPENAI_API_KEY) {
     res.status(500).json({ error: "Server missing OpenAI credentials" });
@@ -94,21 +269,51 @@ app.post("/api/chat", async (req: Request, res: Response) => {
     return;
   }
 
-  const chatMessages: ResponseInput = basicMessages.map((message) => ({
-    role: message.role,
-    content: message.content,
-  }));
+  // Build conversation context from user messages
+  const conversationText = basicMessages
+    .filter((m) => m.role === "user")
+    .map((m) => m.content)
+    .join(" ");
 
-  let stream: Stream<ResponseStreamEvent> | null = null;
+  const chatMessages: ChatCompletionMessageParam[] = [
+    {
+      role: "system",
+      content: `You are a helpful legal triage assistant for Acme Corp. Your job is to:
+
+1. Greet users warmly and understand their legal request from the initial message
+2. Ask follow-up questions to gather required information (requestType and location)
+3. Once you have ALL required information (requestType + location), call extract_request_info to route the request
+4. The system will automatically route their request based on configured rules
+
+AVAILABLE REQUEST TYPES:
+- contracts: NDAs, customer agreements, vendor contracts
+- employment_hr: Hiring, terminations, workplace issues
+- litigation_disputes: Lawsuits, legal threats, disputes
+- intellectual_property: Trademarks, patents, copyrights
+- regulatory_compliance: Government rules, licenses, audits
+- corporate_ma: Fundraising, acquisitions, equity/stock
+- real_estate: Office leases, property matters
+- privacy_data: GDPR, CCPA, data breaches
+- general_advice: Not sure or doesn't fit above
+
+AVAILABLE LOCATIONS:
+- australia, united states, united kingdom, canada, europe, asia_pacific, other`,
+    },
+    ...basicMessages.map((message) => ({
+      role: message.role,
+      content: message.content,
+    })),
+  ];
 
   try {
     // If you are using the free tier in groq, beware that there are rate limits.
     // For more info, check out:
     //   https://console.groq.com/docs/rate-limits
-    stream = await openai.responses.create({
-      model: "gpt-5-nano-2025-08-07",
-      reasoning: { effort: "low" },
-      input: chatMessages,
+    const stream = await openai.chat.completions.create({
+      model: "gpt-4o-mini", // Use a model that supports function calling
+      messages: chatMessages,
+      tools: [extractInfoTool],
+      tool_choice: "auto",
       stream: true,
     });
 
@@ -122,7 +327,7 @@ app.post("/api/chat", async (req: Request, res: Response) => {
 
     const abort = () => {
       try {
-        stream?.controller?.abort?.();
+        stream.controller?.abort?.();
       } catch (abortError) {
         console.error("Error aborting OpenAI stream:", abortError);
       }
@@ -131,13 +336,88 @@ app.post("/api/chat", async (req: Request, res: Response) => {
     req.on("close", abort);
     req.on("error", abort);
 
-    for await (const event of stream) {
-      if (event.type !== "response.output_text.delta") continue;
+    let toolCallId = "";
+    let toolCallName = "";
+    let toolCallArgs = "";
 
-      const delta = event.delta;
-      if (typeof delta !== "string" || !delta.length) continue;
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta;
 
-      res.write(delta);
+      if (!delta) continue;
+
+      // Handle regular text content
+      if (delta.content) {
+        res.write(delta.content);
+      }
+
+      // Handle tool calls
+      if (delta.tool_calls) {
+        for (const toolCall of delta.tool_calls) {
+          if (toolCall.id) {
+            toolCallId = toolCall.id;
+          }
+          if (toolCall.function?.name) {
+            toolCallName = toolCall.function.name;
+          }
+          if (toolCall.function?.arguments) {
+            toolCallArgs += toolCall.function.arguments;
+          }
+        }
+      }
+
+      // If the finish reason is tool_calls, execute the function
+      if (chunk.choices[0]?.finish_reason === "tool_calls") {
+        if (toolCallName === "extract_request_info") {
+          try {
+            const args = JSON.parse(toolCallArgs);
+
+            // Build ExtractedInfo object
+            const extractedInfo: ExtractedInfo = {
+              requestType: args.requestType,
+              location: args.location,
+              value: args.value,
+              department: args.department,
+              urgency: args.urgency,
+              rawText: conversationText,
+            };
+
+            // Run through rule engine
+            const decision: RoutingDecision = ruleEngine.route(extractedInfo, currentRules);
+
+            console.log("Routing decision:", decision);
+
+            // Format response based on decision
+            if (decision.matched && decision.assignTo) {
+              const ruleInfo = decision.matchedRule
+                ? ` (matched rule: "${decision.matchedRule.name}")`
+                : "";
+
+              res.write(
+                `\n\n✅ **Your request has been successfully routed!**\n\n` +
+                `**Assigned to:** ${decision.assignTo}\n` +
+                `**Confidence:** ${decision.confidence}%\n` +
+                `**Reason:** ${decision.reasoning}${ruleInfo}\n\n` +
+                `${decision.assignTo} will review your ${args.requestType} request and get back to you shortly.`
+              );
+            } else if (decision.needsClarification) {
+              res.write(
+                `\n\n⚠️ **Need more information to route your request**\n\n` +
+                `Missing: ${decision.needsClarification.missingFields.join(", ")}\n\n` +
+                `${decision.needsClarification.question}`
+              );
+            } else {
+              res.write(
+                `\n\n⚠️ **Could not find a matching rule**\n\n` +
+                `**Reason:** ${decision.reasoning}\n\n` +
+                `I'll route this to legal-general@acme.corp for manual review.`
+              );
+            }
+          } catch (parseError) {
+            console.error("Error parsing tool call arguments:", parseError);
+            res.write("\n\n[Error processing routing]");
+          }
+        }
+      }
     }
 
     res.end();
