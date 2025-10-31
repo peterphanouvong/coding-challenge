@@ -164,7 +164,7 @@
 .chat-input input:focus {
   outline: 1px solid #3b82f6;
 }
-
+/* 
 .chat-input button {
   padding: 0.9rem 1.5rem;
   border-radius: 12px;
@@ -186,7 +186,7 @@
 .chat-input button:not(:disabled):hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 30px rgba(59, 130, 246, 0.35);
-}
+} */
 
 .configure-page {
   margin: 0 auto;

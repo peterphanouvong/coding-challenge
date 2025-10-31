@@ -1,5 +1,3 @@
-import { useState } from "react";
-import { X, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,11 +7,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatRequestType } from "@/lib/formatters";
+import { RequestType } from "@/types";
 import type {
   Condition,
   ConditionField,
   ConditionOperator,
 } from "@/types/rules";
+import { Plus, X } from "lucide-react";
 
 interface RuleBuilderProps {
   conditions: Condition[];
@@ -36,19 +37,59 @@ const OPERATOR_OPTIONS: { value: ConditionOperator; label: string }[] = [
   { value: "less_than", label: "Less Than" },
 ];
 
-const REQUEST_TYPE_VALUES: { value: string; label: string; description: string }[] = [
-  { value: "contracts", label: "Contracts", description: "NDAs, customer agreements, vendor contracts" },
-  { value: "employment_hr", label: "Employment/HR", description: "Hiring, terminations, workplace issues" },
-  { value: "litigation_disputes", label: "Litigation/Disputes", description: "Lawsuits, legal threats, disputes" },
-  { value: "intellectual_property", label: "Intellectual Property", description: "Trademarks, patents, copyrights" },
-  { value: "regulatory_compliance", label: "Regulatory/Compliance", description: "Government rules, licenses, audits" },
-  { value: "corporate_ma", label: "Corporate/M&A", description: "Fundraising, acquisitions, equity/stock" },
-  { value: "real_estate", label: "Real Estate", description: "Office leases, property matters" },
-  { value: "privacy_data", label: "Privacy/Data Protection", description: "GDPR, CCPA, data breaches" },
-  { value: "general_advice", label: "General Advice", description: "Not sure or doesn't fit above" },
+export const REQUEST_TYPE_VALUES: {
+  value: RequestType;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "contracts",
+    label: "Contracts",
+    description: "NDAs, customer agreements, vendor contracts",
+  },
+  {
+    value: "employment_hr",
+    label: "Employment/HR",
+    description: "Hiring, terminations, workplace issues",
+  },
+  {
+    value: "litigation_disputes",
+    label: "Litigation/Disputes",
+    description: "Lawsuits, legal threats, disputes",
+  },
+  {
+    value: "intellectual_property",
+    label: "Intellectual Property",
+    description: "Trademarks, patents, copyrights",
+  },
+  {
+    value: "regulatory_compliance",
+    label: "Regulatory/Compliance",
+    description: "Government rules, licenses, audits",
+  },
+  {
+    value: "corporate_ma",
+    label: "Corporate/M&A",
+    description: "Fundraising, acquisitions, equity/stock",
+  },
+  {
+    value: "real_estate",
+    label: "Real Estate",
+    description: "Office leases, property matters",
+  },
+  {
+    value: "privacy_data",
+    label: "Privacy/Data Protection",
+    description: "GDPR, CCPA, data breaches",
+  },
+  {
+    value: "general_advice",
+    label: "General Advice",
+    description: "Not sure or doesn't fit above",
+  },
 ];
 
-const LOCATION_VALUES: { value: string; label: string }[] = [
+export const LOCATION_VALUES: { value: string; label: string }[] = [
   { value: "australia", label: "Australia" },
   { value: "united states", label: "United States" },
   { value: "united kingdom", label: "United Kingdom" },
@@ -58,7 +99,7 @@ const LOCATION_VALUES: { value: string; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
-const URGENCY_VALUES = ["low", "medium", "high"];
+export const URGENCY_VALUES = ["low", "medium", "high"];
 
 export function RuleBuilder({ conditions, onChange }: RuleBuilderProps) {
   const addCondition = () => {
@@ -76,10 +117,7 @@ export function RuleBuilder({ conditions, onChange }: RuleBuilderProps) {
     onChange(conditions.filter((_, i) => i !== index));
   };
 
-  const updateCondition = (
-    index: number,
-    updates: Partial<Condition>
-  ) => {
+  const updateCondition = (index: number, updates: Partial<Condition>) => {
     const newConditions = [...conditions];
     newConditions[index] = { ...newConditions[index], ...updates };
     onChange(newConditions);
@@ -91,19 +129,21 @@ export function RuleBuilder({ conditions, onChange }: RuleBuilderProps) {
       return (
         <Select
           value={String(condition.value)}
-          onValueChange={(value) =>
-            updateCondition(index, { value })
-          }
+          onValueChange={(value) => updateCondition(index, { value })}
         >
           <SelectTrigger className="min-w-[220px]">
-            <SelectValue placeholder="Select type..." />
+            <SelectValue placeholder="Select type...">
+              {formatRequestType(String(condition.value))}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {REQUEST_TYPE_VALUES.map((type) => (
               <SelectItem key={type.value} value={type.value}>
-                <div className="flex flex-col">
+                <div className="flex flex-col items-start">
                   <span className="font-medium">{type.label}</span>
-                  <span className="text-xs text-muted-foreground">{type.description}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {type.description}
+                  </span>
                 </div>
               </SelectItem>
             ))}
@@ -116,9 +156,7 @@ export function RuleBuilder({ conditions, onChange }: RuleBuilderProps) {
       return (
         <Select
           value={String(condition.value)}
-          onValueChange={(value) =>
-            updateCondition(index, { value })
-          }
+          onValueChange={(value) => updateCondition(index, { value })}
         >
           <SelectTrigger className="min-w-[180px]">
             <SelectValue placeholder="Select location..." />
@@ -138,9 +176,7 @@ export function RuleBuilder({ conditions, onChange }: RuleBuilderProps) {
       return (
         <Select
           value={String(condition.value)}
-          onValueChange={(value) =>
-            updateCondition(index, { value })
-          }
+          onValueChange={(value) => updateCondition(index, { value })}
         >
           <SelectTrigger className="min-w-[180px]">
             <SelectValue placeholder="Select urgency..." />
@@ -176,9 +212,7 @@ export function RuleBuilder({ conditions, onChange }: RuleBuilderProps) {
       <Input
         type="text"
         value={condition.value}
-        onChange={(e) =>
-          updateCondition(index, { value: e.target.value })
-        }
+        onChange={(e) => updateCondition(index, { value: e.target.value })}
         placeholder="Enter value..."
         className="min-w-[180px]"
       />
