@@ -1,7 +1,6 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { RuleBuilder } from "@/components/RuleBuilder";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -18,26 +17,25 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { RuleBuilder } from "@/components/RuleBuilder";
-import { useState, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  Plus,
-  Trash2,
-  Edit2,
-  Save,
-  X,
-  Mail,
-  ChevronDown,
-  ChevronRight,
-  Search,
-} from "lucide-react";
-import type { Rule, RulesByAssignee, Condition } from "@/types/rules";
-import {
+  formatConditionValue,
   formatFieldName,
   formatOperator,
-  formatConditionValue,
 } from "@/lib/formatters";
+import type { Condition, Rule, RulesByAssignee } from "@/types/rules";
+import {
+  ChevronDown,
+  ChevronRight,
+  Edit2,
+  Mail,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8999";
