@@ -1,9 +1,13 @@
+import { ActionButtons } from "@/components/ActionButtons";
+import { ClarificationForm } from "@/components/ClarificationForm";
+import { EditableSummary } from "@/components/EditableSummary";
 import {
   LOCATION_VALUES,
   REQUEST_TYPE_VALUES,
   URGENCY_VALUES,
 } from "@/components/RuleBuilder";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,7 +20,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { formatRequestType } from "@/lib/formatters";
 import { Location, RequestType } from "@/types";
-import { BookIcon } from "lucide-react";
+import { CornerDownRightIcon, PlusIcon, X } from "lucide-react";
 import Markdown from "markdown-to-jsx";
 import {
   ChangeEvent,
@@ -26,9 +30,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { ClarificationForm } from "@/components/ClarificationForm";
-import { ActionButtons } from "@/components/ActionButtons";
-import { EditableSummary } from "@/components/EditableSummary";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8999";
@@ -89,12 +90,32 @@ const createMessage = (overrides?: Partial<ChatMessage>): ChatMessage => ({
   ...overrides,
 });
 
+// Example prompts to help users get started
+const EXAMPLE_PROMPTS = [
+  {
+    description:
+      "I need help reviewing an employment contract for a new hire in Australia",
+  },
+  {
+    description:
+      "We need an NDA for a new vendor partnership in the United States",
+  },
+  {
+    description:
+      "I have questions about trademark protection for our new product in Europe",
+  },
+  {
+    description: "Need guidance on GDPR compliance for our European customers",
+  },
+];
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTemplate, setShowTemplate] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [selectedRequestType, setSelectedRequestType] =
     useState<RequestType | null>(null);
@@ -120,6 +141,17 @@ export default function ChatPage() {
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     setInput(event.target.value);
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setInput(suggestion);
+    // Focus on the input field
+    const inputElement = document.getElementById(
+      "chat-input"
+    ) as HTMLInputElement;
+    if (inputElement) {
+      inputElement.focus();
+    }
   };
 
   const handleClarificationSubmit = (selections: {
@@ -161,7 +193,9 @@ export default function ChatPage() {
     }, 0);
   };
 
-  const handleSummaryRetry = (updatedFields: Record<string, string | number>) => {
+  const handleSummaryRetry = (
+    updatedFields: Record<string, string | number>
+  ) => {
     // Format the updated fields into a user message
     const parts: string[] = [];
 
@@ -385,43 +419,51 @@ export default function ChatPage() {
 
   return (
     <div className="chat-page">
-      <div className="chat-window">
-        {messages.length === 0 && (
-          <div className="placeholder">
-            <p>No messages yet... Make a request!</p>
-          </div>
-        )}
-        {messages.map((message) => (
-          <div key={message.id} className={`message message-${message.role}`}>
-            <span className="message-role">
-              {message.role === "user" ? "You" : "Assistant"}
-            </span>
-            <p
-              className="prose prose-invert"
-              style={{ whiteSpace: "pre-wrap" }}
-            >
-              <Markdown>
-                {message.content ||
-                  (message.role === "assistant" && isStreaming ? "…" : "")}
-              </Markdown>
+      {messages.length === 0 ? (
+        <div className="flex items-center justify-center flex-1">
+          <div className="text-center space-y-2 pt-32">
+            <h1 className="text-4xl md:text-5xl font-semibold text-white/90">
+              Legal Frontdoor
+            </h1>
+            <p className="text-muted-foreground text-sm md:text-base">
+              Connect with the right attorney for your legal needs
             </p>
-            {message.uiComponent && (
-              <ClarificationForm
-                data={message.uiComponent}
-                onSubmit={handleClarificationSubmit}
-              />
-            )}
-            {message.summary && (
-              <EditableSummary
-                data={message.summary}
-                onRetry={handleSummaryRetry}
-              />
-            )}
-            {message.actions && <ActionButtons data={message.actions} />}
           </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
+        </div>
+      ) : (
+        <div className="chat-window">
+          {messages.map((message) => (
+            <div key={message.id} className={`message message-${message.role}`}>
+              <span className="message-role">
+                {message.role === "user" ? "You" : "Assistant"}
+              </span>
+              <p
+                className="prose prose-invert"
+                style={{ whiteSpace: "pre-wrap" }}
+              >
+                <Markdown>
+                  {message.content ||
+                    (message.role === "assistant" && isStreaming ? "…" : "")}
+                </Markdown>
+              </p>
+              {message.uiComponent && (
+                <ClarificationForm
+                  data={message.uiComponent}
+                  onSubmit={handleClarificationSubmit}
+                />
+              )}
+              {message.summary && (
+                <EditableSummary
+                  data={message.summary}
+                  onRetry={handleSummaryRetry}
+                />
+              )}
+              {message.actions && <ActionButtons data={message.actions} />}
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+      )}
 
       {error && <div className="chat-error">{error}</div>}
 
@@ -522,25 +564,69 @@ export default function ChatPage() {
           />
         )}
 
-        <div className="flex justify-between px-4 py-2">
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="template"
-              checked={showTemplate}
-              onClick={() => {
-                setShowTemplate(!showTemplate);
-              }}
-            />
-            <Label htmlFor="template" className="text-white/70 text-sm">
-              Use template
-            </Label>
-          </div>
-
+        <div className="flex justify-between px-2 py-2">
+          <Button type="button" size="icon" variant={"ghost"} className="">
+            <PlusIcon />
+          </Button>
           <Button type="submit" disabled={!canSubmit}>
             {isStreaming ? "Thinking…" : "Send"}
           </Button>
         </div>
       </form>
+
+      {/* Example Prompts - Only show when no messages and not streaming */}
+      {messages.length === 0 && !isStreaming && showSuggestions && (
+        <Card className="space-y-3 rounded-2xl pb-2 border-none">
+          <div className="p-4 px-6 pb-0 flex justify-between items-center">
+            <div className="flex items-center gap-2 text-white/70 font-medium text-sm">
+              <CornerDownRightIcon className="h-4 w-4" />
+              <span>Suggestions</span>
+            </div>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => setShowSuggestions(false)}
+              className="h-8 w-8"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 px-3">
+            {EXAMPLE_PROMPTS.map((prompt, index) => (
+              <button
+                key={index}
+                onClick={() => handleSuggestionClick(prompt.description)}
+                className="group text-left p-3 rounded-md  hover:bg-white/5 transition-all duration-200"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white/90 text-sm line-clamp-2">
+                      {prompt.description}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            ))}
+            <Label
+              htmlFor="template"
+              className="group text-left p-3 rounded-md  hover:bg-white/5 transition-all duration-200"
+            >
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="template"
+                  checked={showTemplate}
+                  onClick={() => {
+                    setShowTemplate(!showTemplate);
+                  }}
+                />
+                <span className="text-white/70 text-sm">Use template</span>
+              </div>
+            </Label>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
