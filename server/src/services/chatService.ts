@@ -4,7 +4,12 @@
 
 import { Request, Response } from "express";
 import OpenAI from "openai";
-import { getOpenAIClient, DEFAULT_MODEL, DEFAULT_TEMPERATURE, DEFAULT_TOP_P } from "../config/openai.config";
+import {
+  getOpenAIClient,
+  DEFAULT_MODEL,
+  DEFAULT_TEMPERATURE,
+  DEFAULT_TOP_P,
+} from "../config/openai.config";
 import { generateSystemPrompt } from "../ai/systemPrompt";
 import { requestClarificationTool, extractInfoTool } from "../ai/tools";
 import { ExtractedInfo, RoutingDecision, Rule } from "../types";
@@ -12,11 +17,11 @@ import { RuleEngine } from "./ruleEngine";
 import {
   buildClarificationForm,
   buildSuccessResponse,
-  buildClarificationResponse,
   buildFallbackResponse,
 } from "./responseBuilder";
 
-type ChatCompletionMessageParam = OpenAI.Chat.Completions.ChatCompletionMessageParam;
+type ChatCompletionMessageParam =
+  OpenAI.Chat.Completions.ChatCompletionMessageParam;
 
 interface BasicMessage {
   role: "system" | "user" | "assistant";
@@ -133,7 +138,10 @@ export async function handleChatStream(
 /**
  * Handles the request_clarification_ui tool call
  */
-function handleClarificationToolCall(res: Response, toolCallArgs: string): void {
+function handleClarificationToolCall(
+  res: Response,
+  toolCallArgs: string
+): void {
   try {
     const args = JSON.parse(toolCallArgs);
     const clarificationForm = buildClarificationForm(args);
@@ -180,8 +188,6 @@ function handleExtractInfoToolCall(
     // Format response based on decision
     if (decision.matched && decision.assignTo) {
       res.write(buildSuccessResponse(decision, args));
-    } else if (decision.needsClarification) {
-      res.write(buildClarificationResponse(decision, args));
     } else {
       res.write(buildFallbackResponse(args));
     }

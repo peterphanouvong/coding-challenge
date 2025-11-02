@@ -198,26 +198,39 @@ export function buildSuccessResponse(
 }
 
 /**
- * Builds a clarification needed response
+ * Builds action buttons for the fallback response
  */
-export function buildClarificationResponse(
-  decision: RoutingDecision,
-  args: any
-): string {
-  const summaryFields = buildSummaryFields(args);
-  const summary =
-    summaryFields.length > 0
-      ? buildEditableSummary(summaryFields) + "\n\n"
-      : "";
+function buildFallbackActionButtons(args: any): string {
+  const requestTypeFormatted = args.requestType
+    ? formatForDisplay(args.requestType)
+    : "Legal Request";
 
-  return (
-    `## 🤔 Just need a bit more info\n\n` +
-    summary +
-    `${decision
-      .needsClarification!.questions.map((q) => `${q}\n`)
-      .join("")}\n\n` +
-    `---`
-  );
+  const actions = {
+    type: "action_buttons",
+    actions: [
+      {
+        type: "email",
+        label: "Email General Legal Team",
+        email: "legal-general@acme.corp",
+        subject: requestTypeFormatted,
+        body: `Hi,\n\nI have a legal request that I'd like to discuss.\n\n${
+          args.summary || ""
+        }\n\nThank you!`,
+      },
+      {
+        type: "link",
+        label: "Visit FAQ",
+        url: "https://acme.corp/legal/faq",
+      },
+      {
+        type: "link",
+        label: "More Information",
+        url: "https://acme.corp/legal/resources",
+      },
+    ],
+  };
+
+  return `__ACTIONS__${JSON.stringify(actions)}__END_ACTIONS__`;
 }
 
 /**
@@ -226,12 +239,13 @@ export function buildClarificationResponse(
 export function buildFallbackResponse(args: any): string {
   const summaryFields = buildSummaryFields(args);
   const summary = buildEditableSummary(summaryFields);
+  const actions = buildFallbackActionButtons(args);
 
   return (
     `## 👋 We'll take it from here\n\n` +
     `I couldn't find a specific team member for this request, but don't worry! I've forwarded it to our general legal team at **legal-general@acme.corp** who will make sure it gets to the right person.\n\n` +
     summary +
     `\n\nSomeone will be in touch shortly.\n\n` +
-    `---`
+    actions
   );
 }
