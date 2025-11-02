@@ -18,9 +18,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatRequestType } from "@/lib/formatters";
 import { Location, RequestType } from "@/types";
-import { CornerDownRightIcon, PlusIcon, X } from "lucide-react";
+import { BookIcon, CornerDownRightIcon, PlusIcon, X } from "lucide-react";
 import Markdown from "markdown-to-jsx";
 import {
   ChangeEvent,
@@ -565,9 +571,21 @@ export default function ChatPage() {
         )}
 
         <div className="flex justify-between px-2 py-2">
-          <Button type="button" size="icon" variant={"ghost"} className="">
-            <PlusIcon />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant={showSuggestions ? "secondary" : "ghost"}
+                  onClick={() => setShowSuggestions(!showSuggestions)}
+                >
+                  <BookIcon />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Suggestions</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Button type="submit" disabled={!canSubmit}>
             {isStreaming ? "Thinking…" : "Send"}
           </Button>
