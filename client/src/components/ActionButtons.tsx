@@ -1,15 +1,21 @@
 import { Button } from "@/components/ui/button";
-import { Mail, ExternalLink, Copy, Check } from "lucide-react";
+import { Mail, ExternalLink, Copy, Check, ArrowUpRight } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface ActionButton {
-  type: "email" | "link" | "copy";
+  type: "email" | "link" | "copy" | "navigate";
   label: string;
   email?: string;
   subject?: string;
   body?: string;
   url?: string;
   copyText?: string;
+  path?: string;
+  highlight?: {
+    type: "attorney" | "rule";
+    id: string;
+  };
 }
 
 interface ActionData {
@@ -23,6 +29,7 @@ interface ActionButtonsProps {
 
 export function ActionButtons({ data }: ActionButtonsProps) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const navigate = useNavigate();
 
   const handleAction = (action: ActionButton, index: number) => {
     switch (action.type) {
@@ -56,6 +63,14 @@ export function ActionButtons({ data }: ActionButtonsProps) {
           setTimeout(() => setCopiedIndex(null), 2000);
         }
         break;
+
+      case "navigate":
+        if (action.path) {
+          navigate(action.path, {
+            state: { highlight: action.highlight },
+          });
+        }
+        break;
     }
   };
 
@@ -71,6 +86,8 @@ export function ActionButtons({ data }: ActionButtonsProps) {
         return <ExternalLink className="h-4 w-4 mr-2" />;
       case "copy":
         return <Copy className="h-4 w-4 mr-2" />;
+      case "navigate":
+        return <ArrowUpRight className="h-4 w-4 mr-2" />;
       default:
         return null;
     }

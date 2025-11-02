@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { RuleBuilder } from "@/components/RuleBuilder";
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Plus,
   Trash2,
@@ -45,6 +46,7 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8999";
 
 export default function ConfigurePage() {
+  const location = useLocation();
   const [rulesByAssignee, setRulesByAssignee] = useState<RulesByAssignee>({});
   const [expandedAssignees, setExpandedAssignees] = useState<Set<string>>(
     new Set()
@@ -78,6 +80,48 @@ export default function ConfigurePage() {
   useEffect(() => {
     fetchRules();
   }, []);
+
+  // Handle navigation state (highlight from ActionButtons)
+  useEffect(() => {
+    const state = location.state as { highlight?: { type: "attorney" | "rule"; id: string } } | null;
+    if (state?.highlight) {
+      const { type, id } = state.highlight;
+
+      // Wait for data to load before highlighting
+      if (Object.keys(rulesByAssignee).length > 0) {
+        // Expand the assignee if highlighting an attorney or a rule
+        if (type === "rule") {
+          const assignee = Object.entries(rulesByAssignee).find(([_, rules]) =>
+            rules.some((r) => r.id === id)
+          )?.[0];
+          if (assignee) {
+            setExpandedAssignees((prev) => new Set([...prev, assignee]));
+          }
+        } else if (type === "attorney") {
+          setExpandedAssignees((prev) => new Set([...prev, id]));
+        }
+
+        // Set highlight
+        setHighlightedItem({ type, id });
+
+        // Scroll to item after brief delay
+        setTimeout(() => {
+          const element = cardRefs.current.get(id);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+
+          // Remove highlight after 2 seconds
+          setTimeout(() => {
+            setHighlightedItem(null);
+          }, 2000);
+        }, 100);
+
+        // Clear the state to prevent re-triggering on future renders
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [location.state, rulesByAssignee]);
 
   // Keyboard shortcut for search (Ctrl/Cmd + K)
   useEffect(() => {
