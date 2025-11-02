@@ -7,7 +7,9 @@ export default function App() {
   return (
     <div className="app-shell">
       <nav className="app-nav">
-        <h2>Legal frontdoor</h2>
+        <a className="text-lg font-medium tracking-tight" href="/chat">
+          Legal frontdoor
+        </a>
         <div className="nav-links">
           <NavLink
             to="/chat"
