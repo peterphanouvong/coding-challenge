@@ -17,10 +17,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { RuleBuilder } from "@/components/RuleBuilder";
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
@@ -83,7 +80,9 @@ export default function ConfigurePage() {
 
   // Handle navigation state (highlight from ActionButtons)
   useEffect(() => {
-    const state = location.state as { highlight?: { type: "attorney" | "rule"; id: string } } | null;
+    const state = location.state as {
+      highlight?: { type: "attorney" | "rule"; id: string };
+    } | null;
     if (state?.highlight) {
       const { type, id } = state.highlight;
 
@@ -270,7 +269,11 @@ export default function ConfigurePage() {
     setShowAddAttorney(false);
   };
 
-  const handleSearchSelect = (type: "attorney" | "rule", id: string, assignee?: string) => {
+  const handleSearchSelect = (
+    type: "attorney" | "rule",
+    id: string,
+    assignee?: string
+  ) => {
     setSearchOpen(false);
 
     // Expand the assignee if selecting a rule
@@ -337,11 +340,16 @@ export default function ConfigurePage() {
               {/* Rules */}
               {Object.entries(rulesByAssignee).map(([assignee, rules]) =>
                 rules.length > 0 ? (
-                  <CommandGroup key={assignee} heading={`Rules for ${assignee}`}>
+                  <CommandGroup
+                    key={assignee}
+                    heading={`Rules for ${assignee}`}
+                  >
                     {rules.map((rule) => (
                       <CommandItem
                         key={`rule-${rule.id}`}
-                        onSelect={() => handleSearchSelect("rule", rule.id, assignee)}
+                        onSelect={() =>
+                          handleSearchSelect("rule", rule.id, assignee)
+                        }
                         className="cursor-pointer"
                       >
                         <div className="flex-1">
@@ -382,10 +390,7 @@ export default function ConfigurePage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              onClick={() => setSearchOpen(true)}
-              variant="outline"
-            >
+            <Button onClick={() => setSearchOpen(true)} variant="outline">
               <Search className="h-4 w-4 mr-2" />
               Search
               <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
@@ -408,7 +413,9 @@ export default function ConfigurePage() {
             <CardContent className="pt-6">
               <div className="space-y-3">
                 <div>
-                  <Label htmlFor="attorney-email" className="mb-2">Attorney Email</Label>
+                  <Label htmlFor="attorney-email" className="mb-2">
+                    Attorney Email
+                  </Label>
                   <Input
                     id="attorney-email"
                     type="email"
@@ -497,7 +504,10 @@ export default function ConfigurePage() {
                       <div className="space-y-4">
                         <div className="flex gap-4">
                           <div className="flex-1">
-                            <Label htmlFor={`create-rule-name-${assignee}`} className="mb-2">
+                            <Label
+                              htmlFor={`create-rule-name-${assignee}`}
+                              className="mb-2"
+                            >
                               Rule Name
                             </Label>
                             <Input
@@ -513,7 +523,10 @@ export default function ConfigurePage() {
                             />
                           </div>
                           <div className="w-24">
-                            <Label htmlFor={`create-rule-priority-${assignee}`} className="mb-2">
+                            <Label
+                              htmlFor={`create-rule-priority-${assignee}`}
+                              className="mb-2"
+                            >
                               Priority
                             </Label>
                             <Input
@@ -558,16 +571,16 @@ export default function ConfigurePage() {
                           }
                         />
 
-                        <div className="flex gap-2">
-                          <Button onClick={saveRule} size="sm">
-                            Save
-                          </Button>
+                        <div className="flex gap-2 justify-end">
                           <Button
                             onClick={cancelEditing}
                             variant="outline"
                             size="sm"
                           >
                             Cancel
+                          </Button>
+                          <Button onClick={saveRule} size="sm">
+                            Save
                           </Button>
                         </div>
                       </div>
@@ -594,7 +607,10 @@ export default function ConfigurePage() {
                         <div className="space-y-4">
                           <div className="flex gap-4">
                             <div className="flex-1">
-                              <Label htmlFor={`edit-rule-name-${rule.id}`} className="mb-2">
+                              <Label
+                                htmlFor={`edit-rule-name-${rule.id}`}
+                                className="mb-2"
+                              >
                                 Rule Name
                               </Label>
                               <Input
@@ -610,7 +626,10 @@ export default function ConfigurePage() {
                               />
                             </div>
                             <div className="w-24">
-                              <Label htmlFor={`edit-rule-priority-${rule.id}`} className="mb-2">
+                              <Label
+                                htmlFor={`edit-rule-priority-${rule.id}`}
+                                className="mb-2"
+                              >
                                 Priority
                               </Label>
                               <Input
@@ -629,7 +648,10 @@ export default function ConfigurePage() {
                           </div>
 
                           <div>
-                            <Label htmlFor={`edit-rule-description-${rule.id}`} className="mb-2">
+                            <Label
+                              htmlFor={`edit-rule-description-${rule.id}`}
+                              className="mb-2"
+                            >
                               Description (optional)
                             </Label>
                             <Input
@@ -652,16 +674,16 @@ export default function ConfigurePage() {
                             }
                           />
 
-                          <div className="flex gap-2">
-                            <Button onClick={saveRule} size="sm">
-                              Save
-                            </Button>
+                          <div className="flex gap-2 justify-end">
                             <Button
                               onClick={cancelEditing}
                               variant="outline"
                               size="sm"
                             >
                               Cancel
+                            </Button>
+                            <Button onClick={saveRule} size="sm">
+                              Save
                             </Button>
                           </div>
                         </div>
