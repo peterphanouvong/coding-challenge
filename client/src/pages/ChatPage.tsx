@@ -613,8 +613,8 @@ export default function ChatPage() {
         </div>
       </form>
 
-      {/* Example Prompts - Only show when no messages and not streaming */}
-      {messages.length === 0 && !isStreaming && showSuggestions && (
+      {/* Example Prompts - Show when not streaming and suggestions are enabled */}
+      {!isStreaming && showSuggestions && (
         <Card className="space-y-3 rounded-2xl pb-2 border-none">
           <div className="p-4 px-6 pb-0 flex justify-between items-center">
             <div className="flex items-center gap-2 text-white/70 font-medium text-sm">
