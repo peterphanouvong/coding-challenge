@@ -6,6 +6,7 @@ import {
   REQUEST_TYPE_VALUES,
   URGENCY_VALUES,
 } from "@/components/RuleBuilder";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -151,6 +152,7 @@ export default function ChatPage() {
 
   const handleSuggestionClick = (suggestion: string) => {
     setInput(suggestion);
+    setShowTemplate(false); // Disable template when using a suggestion
     // Focus on the input field
     const inputElement = document.getElementById(
       "chat-input"
@@ -570,22 +572,41 @@ export default function ChatPage() {
           />
         )}
 
-        <div className="flex justify-between px-2 py-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
+        <div className="flex justify-between items-center px-2 py-2">
+          <div className="flex items-center gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant={showSuggestions ? "secondary" : "ghost"}
+                    onClick={() => setShowSuggestions(!showSuggestions)}
+                  >
+                    <BookIcon />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Suggestions</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            {showTemplate && (
+              <Badge
+                variant="secondary"
+                className="flex items-center gap-1 pl-3 h-9 rounded-md"
+                onClick={() => setShowTemplate(false)}
+              >
+                <span className="text-xs">Template</span>
                 <Button
                   type="button"
                   size="icon"
-                  variant={showSuggestions ? "secondary" : "ghost"}
-                  onClick={() => setShowSuggestions(!showSuggestions)}
+                  variant="ghost"
+                  className="h-4 w-4 p-0 hover:bg-transparent"
                 >
-                  <BookIcon />
+                  <X className="h-3 w-3" />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Suggestions</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+              </Badge>
+            )}
+          </div>
           <Button type="submit" disabled={!canSubmit}>
             {isStreaming ? "Thinking…" : "Send"}
           </Button>
