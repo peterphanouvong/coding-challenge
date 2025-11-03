@@ -11,6 +11,9 @@ export type {
   Location,
 } from "../../server/src/types";
 
+// Import for use in this file
+import { Condition, Rule } from "../../server/src/types";
+
 // Client-specific types
 export interface RuleFormData {
   name: string;
@@ -25,5 +28,4 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
-// Import for use in this file
-import { Condition } from "../../server/src/types";
+export type RulesByAssignee = Record<string, Rule[]>;

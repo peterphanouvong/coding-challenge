@@ -25,7 +25,7 @@ import {
   formatFieldName,
   formatOperator,
 } from "@/lib/formatters";
-import type { Condition, Rule, RulesByAssignee } from "@/types/rules";
+import type { Condition, Rule } from "@/types";
 import {
   ChevronDown,
   ChevronRight,
@@ -38,19 +38,19 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8999";
+import { useRules } from "@/hooks/useRules";
 
 export default function ConfigurePage() {
   const location = useLocation();
-  const [rulesByAssignee, setRulesByAssignee] = useState<RulesByAssignee>({});
+
+  // Use custom hook for rules management
+  const { rulesByAssignee, loading, error, createRule, updateRule, deleteRule } = useRules();
+
   const [expandedAssignees, setExpandedAssignees] = useState<Set<string>>(
     new Set()
   );
   const [editingRule, setEditingRule] = useState<string | null>(null);
   const [creatingRuleFor, setCreatingRuleFor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
   // Attorney management
   const [newAttorneyEmail, setNewAttorneyEmail] = useState("");
@@ -77,9 +77,12 @@ export default function ConfigurePage() {
     action: { assignTo: "" },
   });
 
+  // Expand all assignees by default when data loads
   useEffect(() => {
-    fetchRules();
-  }, []);
+    if (Object.keys(rulesByAssignee).length > 0) {
+      setExpandedAssignees(new Set(Object.keys(rulesByAssignee)));
+    }
+  }, [rulesByAssignee]);
 
   // Handle navigation state (highlight from ActionButtons)
   useEffect(() => {
@@ -137,19 +140,7 @@ export default function ConfigurePage() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  const fetchRules = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/rules/by-assignee`);
-      const data = await response.json();
-      setRulesByAssignee(data);
-      // Expand all assignees by default
-      setExpandedAssignees(new Set(Object.keys(data)));
-    } catch (error) {
-      console.error("Failed to fetch rules:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Note: fetchRules is now handled by the useRules hook
 
   const toggleAssignee = (assignee: string) => {
     const newExpanded = new Set(expandedAssignees);
@@ -195,49 +186,35 @@ export default function ConfigurePage() {
     try {
       if (editingRule) {
         // Update existing rule
-        await fetch(`${API_BASE_URL}/api/rules/${editingRule}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        });
+        await updateRule(editingRule, formData);
       } else if (creatingRuleFor) {
         // Create new rule
-        await fetch(`${API_BASE_URL}/api/rules`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        });
+        await createRule(formData);
       }
-      await fetchRules();
       cancelEditing();
     } catch (error) {
       console.error("Failed to save rule:", error);
+      // Error handling is done in the hook
     }
   };
 
-  const deleteRule = async (ruleId: string) => {
+  const handleDeleteRule = async (ruleId: string) => {
     if (!confirm("Are you sure you want to delete this rule?")) return;
 
     try {
-      await fetch(`${API_BASE_URL}/api/rules/${ruleId}`, {
-        method: "DELETE",
-      });
-      await fetchRules();
+      await deleteRule(ruleId);
     } catch (error) {
       console.error("Failed to delete rule:", error);
+      // Error handling is done in the hook
     }
   };
 
   const toggleRuleEnabled = async (rule: Rule) => {
     try {
-      await fetch(`${API_BASE_URL}/api/rules/${rule.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...rule, enabled: !rule.enabled }),
-      });
-      await fetchRules();
+      await updateRule(rule.id, { ...rule, enabled: !rule.enabled });
     } catch (error) {
       console.error("Failed to toggle rule:", error);
+      // Error handling is done in the hook
     }
   };
 
@@ -768,7 +745,7 @@ export default function ConfigurePage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => deleteRule(rule.id)}
+                                onClick={() => handleDeleteRule(rule.id)}
                               >
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>

@@ -6,6 +6,7 @@ import { seedRules } from "./seed-data";
 import { RuleEngine } from "./services/ruleEngine";
 import { createRoutes } from "./routes";
 import { getPort, getCorsOptions, JSON_LIMIT } from "./config/server.config";
+import { errorHandler } from "./middleware/errorHandler";
 
 // Load environment variables from the project root first, then allow local overrides in server/.env
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
@@ -22,6 +23,9 @@ let currentRules = [...seedRules]; // In production, load from database
 
 // Mount all routes
 app.use(createRoutes(currentRules, ruleEngine));
+
+// Global error handler (must be last)
+app.use(errorHandler);
 
 const port = getPort();
 app.listen(port, () => {

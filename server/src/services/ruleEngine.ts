@@ -165,42 +165,98 @@ export class RuleEngine {
       };
     }
 
-    // Step 3: multiple potential matches
-    // Find fields that could help disambiguate
+    // Step 3: Multiple potential matches - need to determine best match
+
+    // Find fields that could help disambiguate between rules
     const differentiatingFields = this.findDifferentiatingFields(
       potentialMatches,
       extractedInfo
     );
 
-    if (differentiatingFields.length > 0) {
+    // Check if we're missing values for any differentiating fields
+    const missingDifferentiatingFields = differentiatingFields.filter(
+      (field) => {
+        const value = extractedInfo[field as keyof ExtractedInfo];
+        return value === undefined || value === null;
+      }
+    );
+
+    // If we have missing differentiating fields, ask for clarification
+    if (missingDifferentiatingFields.length > 0) {
       return {
         matched: false,
         confidence: 30,
         extractedInfo,
         reasoning: `Multiple potential matches found. Need more information to determine the best route.`,
         needsClarification: {
-          missingFields: differentiatingFields as any,
-          questions: differentiatingFields.map((field) =>
+          missingFields: missingDifferentiatingFields as any,
+          questions: missingDifferentiatingFields.map((field) =>
             this.generateClarificationQuestion(field)
           ),
         },
       };
     }
 
-    // Edge case: multiple potential matches but no differentiating fields
-    // Use priority to pick the best one
-    const topMatch = potentialMatches.sort(
-      (a, b) => a.priority - b.priority
-    )[0];
+    // All differentiating fields have values - we can make a decision
+    // Filter for fully matched rules (all conditions satisfied)
+    const fullyMatchedRules = potentialMatches.filter((rule) =>
+      this.evaluateRule(rule, extractedInfo)
+    );
+
+    if (fullyMatchedRules.length > 0) {
+      // Select most specific rule from fully matched rules
+      const mostSpecificRule = this.selectMostSpecificRule(fullyMatchedRules);
+      const confidence = this.calculateConfidence(
+        extractedInfo,
+        mostSpecificRule
+      );
+
+      return {
+        matched: true,
+        assignTo: mostSpecificRule.action.assignTo,
+        confidence,
+        matchedRule: mostSpecificRule,
+        extractedInfo,
+        reasoning: `Matched rule "${mostSpecificRule.name}" (Priority ${
+          mostSpecificRule.priority
+        }, ${mostSpecificRule.conditions.length} conditions). ${
+          fullyMatchedRules.length > 1
+            ? `Selected most specific rule from ${fullyMatchedRules.length} matches.`
+            : ""
+        }`,
+      };
+    }
+
+    // No rules fully match even with all info - use most specific potential match
+    const topMatch = this.selectMostSpecificRule(potentialMatches);
 
     return {
       matched: true,
       assignTo: topMatch.action.assignTo,
       confidence: 35,
       extractedInfo,
-      reasoning: `Multiple similar rules could match. Selected "${topMatch.name}" (Priority ${topMatch.priority}) - highest priority.`,
+      reasoning: `Multiple rules could partially match. Selected "${topMatch.name}" (Priority ${topMatch.priority}) - most specific.`,
       matchedRule: topMatch,
     };
+  }
+
+  /**
+   * Select the most specific rule from a set of rules
+   * Prioritizes by:
+   * 1. Number of conditions (more = more specific)
+   * 2. Priority value (higher = more important)
+   */
+  private selectMostSpecificRule(rules: Rule[]): Rule {
+    return rules.sort((a, b) => {
+      // First, compare by specificity (number of conditions)
+      const specificityDiff = b.conditions.length - a.conditions.length;
+      if (specificityDiff !== 0) {
+        return specificityDiff;
+      }
+
+      // If equal specificity, use priority
+      return b.priority - a.priority;
+    })[0];
   }
 
   /**
