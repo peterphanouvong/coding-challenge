@@ -1,4 +1,5 @@
 import { RuleBuilder } from "@/components/RuleBuilder";
+import { CoverageAnalysis } from "@/components/CoverageAnalysis";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +34,7 @@ import {
   Plus,
   Search,
   Trash2,
+  BarChart3,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -61,6 +63,9 @@ export default function ConfigurePage() {
     id: string;
   } | null>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Coverage analysis state
+  const [showCoverage, setShowCoverage] = useState(false);
 
   // Form state for editing/creating
   const [formData, setFormData] = useState<Partial<Rule>>({
@@ -298,6 +303,27 @@ export default function ConfigurePage() {
     }, 100);
   };
 
+  const handleAttorneyClick = (attorneyEmail: string) => {
+    // Expand the attorney's section
+    setExpandedAssignees((prev) => new Set([...prev, attorneyEmail]));
+
+    // Highlight the attorney
+    setHighlightedItem({ type: "attorney", id: attorneyEmail });
+
+    // Scroll to the attorney after a brief delay
+    setTimeout(() => {
+      const element = cardRefs.current.get(attorneyEmail);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+
+      // Remove highlight after 2 seconds
+      setTimeout(() => {
+        setHighlightedItem(null);
+      }, 2000);
+    }, 100);
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -384,7 +410,7 @@ export default function ConfigurePage() {
             <h1 className="text-3xl font-bold mb-2">Rule Configuration</h1>
             <p className="text-muted-foreground">
               Manage routing rules for each attorney. Rules are evaluated by
-              priority (higher first).
+              priority (lower first).
             </p>
           </div>
           <div className="flex gap-2">
@@ -394,6 +420,13 @@ export default function ConfigurePage() {
               <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
                 <span className="text-xs">⌘</span>K
               </kbd>
+            </Button>
+            <Button
+              onClick={() => setShowCoverage(!showCoverage)}
+              variant={showCoverage ? "default" : "outline"}
+            >
+              <BarChart3 className="h-4 w-4 mr-2" />
+              {showCoverage ? "Hide" : "Show"} Coverage
             </Button>
             <Button
               onClick={() => setShowAddAttorney(!showAddAttorney)}
@@ -439,6 +472,13 @@ export default function ConfigurePage() {
           </Card>
         )}
       </div>
+
+      {/* Coverage Analysis Section */}
+      {showCoverage && (
+        <div className="mb-8">
+          <CoverageAnalysis onAttorneyClick={handleAttorneyClick} />
+        </div>
+      )}
 
       <div className="space-y-6">
         {Object.entries(rulesByAssignee).map(([assignee, rules]) => {

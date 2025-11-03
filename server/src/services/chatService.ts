@@ -188,6 +188,8 @@ function handleExtractInfoToolCall(
     // Format response based on decision
     if (decision.matched && decision.assignTo) {
       res.write(buildSuccessResponse(decision, args));
+    } else if (decision.needsClarification) {
+      res.write(decision.needsClarification.questions.toString());
     } else {
       res.write(buildFallbackResponse(args));
     }

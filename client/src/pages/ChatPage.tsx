@@ -445,7 +445,7 @@ export default function ChatPage() {
               <span className="message-role">
                 {message.role === "user" ? "You" : "Assistant"}
               </span>
-              <p
+              <div
                 className="prose prose-invert"
                 style={{ whiteSpace: "pre-wrap" }}
               >
@@ -453,7 +453,7 @@ export default function ChatPage() {
                   {message.content ||
                     (message.role === "assistant" && isStreaming ? "…" : "")}
                 </Markdown>
-              </p>
+              </div>
               {message.uiComponent && (
                 <ClarificationForm
                   data={message.uiComponent}

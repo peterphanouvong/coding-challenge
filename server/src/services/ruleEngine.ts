@@ -57,6 +57,27 @@ export class RuleEngine {
   }
 
   /**
+   * Check if a rule could potentially match with more information
+   * (i.e., all provided fields match, but some required fields are missing)
+   */
+  private couldMatch(rule: Rule, info: ExtractedInfo): boolean {
+    if (!rule.enabled) return false;
+
+    // Check if all conditions that CAN be evaluated match
+    return rule.conditions.every((condition) => {
+      const fieldValue = info[condition.field];
+
+      // If field is not provided, consider it as potentially matching
+      if (fieldValue === undefined || fieldValue === null) {
+        return true;
+      }
+
+      // If field is provided, it must match
+      return this.evaluateCondition(condition, info);
+    });
+  }
+
+  /**
    * Calculate confidence score based on how much info we have
    */
   private calculateConfidence(info: ExtractedInfo, matchedRule?: Rule): number {
@@ -97,17 +118,39 @@ export class RuleEngine {
 
   /**
    * Main routing method - finds the best matching rule
+   *
+   * Logic:
+   * 1. Find ALL rules that could potentially match (all provided fields match)
+   * 2. If only 1 potential match → route to it confidently
+   * 3. If multiple potential matches → ask clarifying questions about differentiating fields
+   * 4. After clarification, if multiple exact matches → use priority to pick highest
+   * 5. If no matches → route to fallback
    */
   route(extractedInfo: ExtractedInfo, rules: Rule[]): RoutingDecision {
     // Sort rules by priority (higher first)
     const sortedRules = [...rules].sort((a, b) => b.priority - a.priority);
 
-    // Find first matching rule
-    const matchedRule = sortedRules.find((rule) =>
-      this.evaluateRule(rule, extractedInfo)
+    // Step 1: Find ALL rules that could potentially match
+    // (all provided fields match, but some required fields might be missing)
+    const potentialMatches = sortedRules.filter((rule) =>
+      this.couldMatch(rule, extractedInfo)
     );
 
-    if (matchedRule) {
+    if (potentialMatches.length === 0) {
+      // No potential matches - route to fallback
+      return {
+        matched: false,
+        confidence: 20,
+        extractedInfo,
+        reasoning:
+          "No routing rule matches this request. Routing to general legal team.",
+      };
+    }
+
+    // Step 2: If only ONE potential match, route to it confidently
+    // (even if not all its conditions are satisfied yet - it's the only option)
+    if (potentialMatches.length === 1) {
+      const matchedRule = potentialMatches[0];
       const confidence = this.calculateConfidence(extractedInfo, matchedRule);
 
       return {
@@ -122,32 +165,81 @@ export class RuleEngine {
       };
     }
 
-    // No match - check what's missing
-    const missingFields = this.findMissingFields(extractedInfo, sortedRules);
+    // Step 3: multiple potential matches
+    // Find fields that could help disambiguate
+    const differentiatingFields = this.findDifferentiatingFields(
+      potentialMatches,
+      extractedInfo
+    );
 
-    if (missingFields.length > 0) {
+    if (differentiatingFields.length > 0) {
       return {
         matched: false,
         confidence: 30,
         extractedInfo,
-        reasoning: "Need more information to route this request.",
+        reasoning: `Multiple potential matches found. Need more information to determine the best route.`,
         needsClarification: {
-          missingFields: missingFields as any,
-          questions: missingFields.map((field) =>
+          missingFields: differentiatingFields as any,
+          questions: differentiatingFields.map((field) =>
             this.generateClarificationQuestion(field)
           ),
         },
       };
     }
 
-    // Have all info but still no match - no applicable rule
+    // Edge case: multiple potential matches but no differentiating fields
+    // Use priority to pick the best one
+    const topMatch = potentialMatches.sort(
+      (a, b) => a.priority - b.priority
+    )[0];
+
     return {
-      matched: false,
-      confidence: 20,
+      matched: true,
+      assignTo: topMatch.action.assignTo,
+      confidence: 35,
       extractedInfo,
-      reasoning:
-        "No routing rule matches this request. Consider routing to legal-general@acme.corp or creating a new rule.",
+      reasoning: `Multiple similar rules could match. Selected "${topMatch.name}" (Priority ${topMatch.priority}) - highest priority.`,
+      matchedRule: topMatch,
     };
+  }
+
+  /**
+   * Find fields where rules differ and that aren't yet filled in extractedInfo
+   * These are the fields we should ask about to disambiguate between rules
+   */
+  private findDifferentiatingFields(
+    rules: Rule[],
+    info: ExtractedInfo
+  ): string[] {
+    const fieldValuesByRule = new Map<string, Set<string>>();
+
+    // Collect all field values across all rules
+    rules.forEach((rule) => {
+      rule.conditions.forEach((condition) => {
+        const fieldValue = info[condition.field];
+
+        // Only consider fields that aren't filled yet
+        if (fieldValue === undefined || fieldValue === null) {
+          if (!fieldValuesByRule.has(condition.field)) {
+            fieldValuesByRule.set(condition.field, new Set());
+          }
+          fieldValuesByRule
+            .get(condition.field)!
+            .add(String(condition.value).toLowerCase());
+        }
+      });
+    });
+
+    // Find fields where rules have different values (these differentiate the rules)
+    const differentiatingFields: string[] = [];
+    fieldValuesByRule.forEach((values, field) => {
+      console.log(values);
+      if (values.size >= 1) {
+        differentiatingFields.push(field);
+      }
+    });
+
+    return differentiatingFields;
   }
 
   /**
