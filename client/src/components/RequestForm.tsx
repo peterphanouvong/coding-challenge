@@ -10,8 +10,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ChevronDown, ChevronUp, Send, Sparkles } from "lucide-react";
-import type { RequestType, Location } from "@/types/rules";
-import { REQUEST_TYPE_LABELS, REQUEST_TYPE_DESCRIPTIONS } from "@/lib/formatters";
+import type { RequestType, Location } from "../../../server/src/types";
+
+import {
+  REQUEST_TYPES,
+  LOCATIONS,
+  REQUEST_TYPE_OPTIONS,
+} from "../../../server/src/constants/legal.constants";
 
 interface RequestFormData {
   requestType: RequestType | "";
@@ -26,28 +31,6 @@ interface RequestFormProps {
   onSubmit: (data: RequestFormData) => void;
   isLoading: boolean;
 }
-
-const REQUEST_TYPES: RequestType[] = [
-  "contracts",
-  "employment_hr",
-  "litigation_disputes",
-  "intellectual_property",
-  "regulatory_compliance",
-  "corporate_ma",
-  "real_estate",
-  "privacy_data",
-  "general_advice",
-];
-
-const LOCATIONS: Location[] = [
-  "australia",
-  "united states",
-  "united kingdom",
-  "canada",
-  "europe",
-  "asia_pacific",
-  "other",
-];
 
 export function RequestForm({ onSubmit, isLoading }: RequestFormProps) {
   const [formData, setFormData] = useState<RequestFormData>({
@@ -89,7 +72,9 @@ export function RequestForm({ onSubmit, isLoading }: RequestFormProps) {
       {/* Required Fields */}
       <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
         <div className="flex items-center gap-2 mb-3">
-          <Badge variant="destructive" className="text-xs">Required</Badge>
+          <Badge variant="destructive" className="text-xs">
+            Required
+          </Badge>
           <span className="text-sm text-muted-foreground">
             Fill in these fields to route your request
           </span>
@@ -111,12 +96,12 @@ export function RequestForm({ onSubmit, isLoading }: RequestFormProps) {
               <SelectValue placeholder="Select request type..." />
             </SelectTrigger>
             <SelectContent>
-              {REQUEST_TYPES.map((type) => (
-                <SelectItem key={type} value={type}>
+              {REQUEST_TYPE_OPTIONS.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
                   <div className="flex flex-col py-1">
-                    <span className="font-medium">{REQUEST_TYPE_LABELS[type]}</span>
+                    <span className="font-medium">{type.label}</span>
                     <span className="text-xs text-muted-foreground">
-                      {REQUEST_TYPE_DESCRIPTIONS[type]}
+                      {type.description}
                     </span>
                   </div>
                 </SelectItem>
@@ -152,9 +137,7 @@ export function RequestForm({ onSubmit, isLoading }: RequestFormProps) {
 
         {/* Description */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Describe your request *
-          </label>
+          <label className="text-sm font-medium">Describe your request *</label>
           <textarea
             value={formData.description}
             onChange={(e) =>
@@ -165,7 +148,8 @@ export function RequestForm({ onSubmit, isLoading }: RequestFormProps) {
             disabled={isLoading}
           />
           <p className="text-xs text-muted-foreground">
-            Provide details about your legal request so we can route you to the right attorney
+            Provide details about your legal request so we can route you to the
+            right attorney
           </p>
         </div>
       </div>
@@ -179,7 +163,9 @@ export function RequestForm({ onSubmit, isLoading }: RequestFormProps) {
           disabled={isLoading}
         >
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">Optional</Badge>
+            <Badge variant="outline" className="text-xs">
+              Optional
+            </Badge>
             <span className="text-sm font-medium">
               Additional details (help us prioritize)
             </span>
@@ -208,7 +194,9 @@ export function RequestForm({ onSubmit, isLoading }: RequestFormProps) {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      value: e.target.value ? Number(e.target.value) : undefined,
+                      value: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
                     })
                   }
                   placeholder="100000"
@@ -217,7 +205,8 @@ export function RequestForm({ onSubmit, isLoading }: RequestFormProps) {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                For contracts or M&A - helps route high-value deals to senior attorneys
+                For contracts or M&A - helps route high-value deals to senior
+                attorneys
               </p>
             </div>
 
@@ -275,12 +264,7 @@ export function RequestForm({ onSubmit, isLoading }: RequestFormProps) {
       </div>
 
       {/* Submit Button */}
-      <Button
-        type="submit"
-        className="w-full"
-        size="lg"
-        disabled={!canSubmit}
-      >
+      <Button type="submit" className="w-full" size="lg" disabled={!canSubmit}>
         {isLoading ? (
           <>
             <span className="animate-pulse">Routing your request...</span>

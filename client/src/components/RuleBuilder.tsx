@@ -8,13 +8,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatRequestType } from "@/lib/formatters";
-import { RequestType } from "@/types";
 import type {
   Condition,
   ConditionField,
   ConditionOperator,
-} from "@/types/rules";
+} from "../../../server/src/types";
 import { Plus, X } from "lucide-react";
+import {
+  LOCATION_OPTIONS,
+  REQUEST_TYPE_OPTIONS,
+} from "../../../server/src/constants/legal.constants";
 
 interface RuleBuilderProps {
   conditions: Condition[];
@@ -35,68 +38,6 @@ const OPERATOR_OPTIONS: { value: ConditionOperator; label: string }[] = [
   { value: "not_equals", label: "Not Equals" },
   { value: "greater_than", label: "Greater Than" },
   { value: "less_than", label: "Less Than" },
-];
-
-export const REQUEST_TYPE_VALUES: {
-  value: RequestType;
-  label: string;
-  description: string;
-}[] = [
-  {
-    value: "contracts",
-    label: "Contracts",
-    description: "NDAs, customer agreements, vendor contracts",
-  },
-  {
-    value: "employment_hr",
-    label: "Employment/HR",
-    description: "Hiring, terminations, workplace issues",
-  },
-  {
-    value: "litigation_disputes",
-    label: "Litigation/Disputes",
-    description: "Lawsuits, legal threats, disputes",
-  },
-  {
-    value: "intellectual_property",
-    label: "Intellectual Property",
-    description: "Trademarks, patents, copyrights",
-  },
-  {
-    value: "regulatory_compliance",
-    label: "Regulatory/Compliance",
-    description: "Government rules, licenses, audits",
-  },
-  {
-    value: "corporate_ma",
-    label: "Corporate/M&A",
-    description: "Fundraising, acquisitions, equity/stock",
-  },
-  {
-    value: "real_estate",
-    label: "Real Estate",
-    description: "Office leases, property matters",
-  },
-  {
-    value: "privacy_data",
-    label: "Privacy/Data Protection",
-    description: "GDPR, CCPA, data breaches",
-  },
-  {
-    value: "general_advice",
-    label: "General Advice",
-    description: "Not sure or doesn't fit above",
-  },
-];
-
-export const LOCATION_VALUES: { value: string; label: string }[] = [
-  { value: "australia", label: "Australia" },
-  { value: "united states", label: "United States" },
-  { value: "united kingdom", label: "United Kingdom" },
-  { value: "canada", label: "Canada" },
-  { value: "europe", label: "Europe" },
-  { value: "asia_pacific", label: "Asia Pacific" },
-  { value: "other", label: "Other" },
 ];
 
 export const URGENCY_VALUES = ["low", "medium", "high"];
@@ -137,7 +78,7 @@ export function RuleBuilder({ conditions, onChange }: RuleBuilderProps) {
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {REQUEST_TYPE_VALUES.map((type) => (
+            {REQUEST_TYPE_OPTIONS.map((type) => (
               <SelectItem key={type.value} value={type.value}>
                 <div className="flex flex-col items-start">
                   <span className="font-medium">{type.label}</span>
@@ -162,7 +103,7 @@ export function RuleBuilder({ conditions, onChange }: RuleBuilderProps) {
             <SelectValue placeholder="Select location..." />
           </SelectTrigger>
           <SelectContent>
-            {LOCATION_VALUES.map((loc) => (
+            {LOCATION_OPTIONS.map((loc) => (
               <SelectItem key={loc.value} value={loc.value}>
                 {loc.label}
               </SelectItem>

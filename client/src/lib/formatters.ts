@@ -1,28 +1,11 @@
-import type { RequestType } from "@/types/rules";
+import type { RequestType } from "../../../server/src/types";
+import { REQUEST_TYPE_OPTIONS } from "../../../server/src/constants/legal.constants";
 
-export const REQUEST_TYPE_LABELS: Record<RequestType, string> = {
-  contracts: "Contracts",
-  employment_hr: "Employment/HR",
-  litigation_disputes: "Litigation/Disputes",
-  intellectual_property: "Intellectual Property",
-  regulatory_compliance: "Regulatory/Compliance",
-  corporate_ma: "Corporate/M&A",
-  real_estate: "Real Estate",
-  privacy_data: "Privacy/Data Protection",
-  general_advice: "General Advice",
-};
-
-export const REQUEST_TYPE_DESCRIPTIONS: Record<RequestType, string> = {
-  contracts: "NDAs, customer agreements, vendor contracts",
-  employment_hr: "Hiring, terminations, workplace issues",
-  litigation_disputes: "Lawsuits, legal threats, disputes",
-  intellectual_property: "Trademarks, patents, copyrights",
-  regulatory_compliance: "Government rules, licenses, audits",
-  corporate_ma: "Fundraising, acquisitions, equity/stock",
-  real_estate: "Office leases, property matters",
-  privacy_data: "GDPR, CCPA, data breaches",
-  general_advice: "Not sure or doesn't fit above",
-};
+const REQUEST_TYPE_LABELS: Record<RequestType, string> =
+  REQUEST_TYPE_OPTIONS.reduce((acc, item) => {
+    acc[item.value] = item.label;
+    return acc;
+  }, {} as Record<RequestType, string>);
 
 export function formatRequestType(type: string): string {
   return REQUEST_TYPE_LABELS[type as RequestType] || type;
@@ -59,7 +42,10 @@ export function formatOperator(operator: string): string {
   return operatorLabels[operator] || operator;
 }
 
-export function formatConditionValue(field: string, value: string | number): string {
+export function formatConditionValue(
+  field: string,
+  value: string | number
+): string {
   if (field === "requestType") {
     return formatRequestType(String(value));
   }

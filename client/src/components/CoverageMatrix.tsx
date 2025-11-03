@@ -39,6 +39,12 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import {
+  LOCATION_OPTIONS,
+  REQUEST_TYPE_OPTIONS,
+} from "../../../server/src/constants/legal.constants";
+import { Location, RequestType } from "../../../server/src/types";
+import { formatRequestType } from "@/lib/formatters";
 
 interface Rule {
   id: string;
@@ -67,27 +73,19 @@ interface CoverageMatrixProps {
   onAttorneyClick?: (attorneyEmail: string) => void;
 }
 
-const REQUEST_TYPE_LABELS: Record<string, string> = {
-  contracts: "Contracts",
-  employment_hr: "Employment",
-  litigation_disputes: "Litigation",
-  intellectual_property: "IP",
-  regulatory_compliance: "Regulatory",
-  corporate_ma: "M&A",
-  real_estate: "Real Estate",
-  privacy_data: "Privacy",
-  general_advice: "General",
-};
+const REQUEST_TYPE_LABELS: Record<RequestType, string> =
+  REQUEST_TYPE_OPTIONS.reduce((acc, item) => {
+    acc[item.value] = item.label;
+    return acc;
+  }, {} as Record<RequestType, string>);
 
-const LOCATION_LABELS: Record<string, string> = {
-  australia: "AU",
-  "united states": "US",
-  "united kingdom": "UK",
-  canada: "CA",
-  europe: "EU",
-  asia_pacific: "APAC",
-  other: "Other",
-};
+const LOCATION_LABELS: Record<Location, string> = LOCATION_OPTIONS.reduce(
+  (acc, item) => {
+    acc[item.value] = item.label;
+    return acc;
+  },
+  {} as Record<Location, string>
+);
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8999";
@@ -207,14 +205,14 @@ export function CoverageMatrix({
   };
 
   const getCellTooltip = (
-    requestType: string,
-    location: string,
+    requestType: RequestType,
+    location: Location,
     coverage: { covered: boolean; rules: Rule[] }
   ) => {
     if (!coverage.covered) {
       return (
         <div className="text-xs">
-          No rule covers {REQUEST_TYPE_LABELS[requestType]} +{" "}
+          No rule covers {formatRequestType(requestType)} +{" "}
           {LOCATION_LABELS[location]}
         </div>
       );
@@ -356,7 +354,7 @@ export function CoverageMatrix({
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger>
-                            {LOCATION_LABELS[location] || location}
+                            {LOCATION_LABELS[location as Location] || location}
                           </TooltipTrigger>
                           <TooltipContent>
                             <div className="text-xs">
@@ -384,7 +382,7 @@ export function CoverageMatrix({
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger className="text-left">
-                            {REQUEST_TYPE_LABELS[requestType] || requestType}
+                            {formatRequestType(requestType)}
                           </TooltipTrigger>
                           <TooltipContent>
                             <div className="text-xs">
@@ -437,8 +435,8 @@ export function CoverageMatrix({
                               <TooltipContent className="max-w-sm">
                                 <div>
                                   {getCellTooltip(
-                                    requestType,
-                                    location,
+                                    requestType as RequestType,
+                                    location as Location,
                                     coverage
                                   )}
                                   {coverage.covered &&
@@ -499,8 +497,8 @@ export function CoverageMatrix({
             <DialogDescription>
               {selectedOverlap && (
                 <>
-                  For {REQUEST_TYPE_LABELS[selectedOverlap.requestType]}{" "}
-                  requests from {LOCATION_LABELS[selectedOverlap.location]}
+                  For {formatRequestType(selectedOverlap.requestType)} requests
+                  from {LOCATION_LABELS[selectedOverlap.location as Location]}
                 </>
               )}
             </DialogDescription>
@@ -509,7 +507,7 @@ export function CoverageMatrix({
           {selectedOverlap && (
             <div className="space-y-4">
               <div className="text-sm text-muted-foreground">
-                Rules are evaluated in priority order (lower first). Drag to
+                Rules are evaluated in priority order (highest first). Drag to
                 reorder priorities.
               </div>
 

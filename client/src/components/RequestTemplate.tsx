@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -9,9 +8,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
-import type { RequestType, Location } from "@/types/rules";
-import { REQUEST_TYPE_LABELS, REQUEST_TYPE_DESCRIPTIONS } from "@/lib/formatters";
+import type { Location, RequestType } from "../../../server/src/types";
+import { ChevronDown, ChevronUp, Sparkles, X } from "lucide-react";
+import { useState } from "react";
+
+import {
+  LOCATIONS,
+  REQUEST_TYPE_OPTIONS,
+} from "../../../server/src/constants/legal.constants";
 
 interface TemplateData {
   requestType: RequestType | "";
@@ -27,29 +31,10 @@ interface RequestTemplateProps {
   onClose: () => void;
 }
 
-const REQUEST_TYPES: RequestType[] = [
-  "contracts",
-  "employment_hr",
-  "litigation_disputes",
-  "intellectual_property",
-  "regulatory_compliance",
-  "corporate_ma",
-  "real_estate",
-  "privacy_data",
-  "general_advice",
-];
-
-const LOCATIONS: Location[] = [
-  "australia",
-  "united states",
-  "united kingdom",
-  "canada",
-  "europe",
-  "asia_pacific",
-  "other",
-];
-
-export function RequestTemplate({ onUseTemplate, onClose }: RequestTemplateProps) {
+export function RequestTemplate({
+  onUseTemplate,
+  onClose,
+}: RequestTemplateProps) {
   const [data, setData] = useState<TemplateData>({
     requestType: "",
     location: "",
@@ -115,7 +100,9 @@ export function RequestTemplate({ onUseTemplate, onClose }: RequestTemplateProps
         {/* Required Fields */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Badge variant="destructive" className="text-xs">Required</Badge>
+            <Badge variant="destructive" className="text-xs">
+              Required
+            </Badge>
           </div>
 
           {/* Request Type */}
@@ -131,12 +118,12 @@ export function RequestTemplate({ onUseTemplate, onClose }: RequestTemplateProps
                 <SelectValue placeholder="Select type..." />
               </SelectTrigger>
               <SelectContent>
-                {REQUEST_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
+                {REQUEST_TYPE_OPTIONS.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
                     <div className="flex flex-col py-1">
-                      <span className="font-medium">{REQUEST_TYPE_LABELS[type]}</span>
+                      <span className="font-medium">{type.label}</span>
                       <span className="text-xs text-muted-foreground">
-                        {REQUEST_TYPE_DESCRIPTIONS[type]}
+                        {type.description}
                       </span>
                     </div>
                   </SelectItem>
@@ -172,7 +159,9 @@ export function RequestTemplate({ onUseTemplate, onClose }: RequestTemplateProps
             <label className="text-sm font-medium">Description *</label>
             <textarea
               value={data.description}
-              onChange={(e) => setData({ ...data, description: e.target.value })}
+              onChange={(e) =>
+                setData({ ...data, description: e.target.value })
+              }
               placeholder="Describe your legal request..."
               className="w-full min-h-[80px] px-3 py-2 rounded-md border border-input bg-background text-sm resize-y"
             />
@@ -187,7 +176,9 @@ export function RequestTemplate({ onUseTemplate, onClose }: RequestTemplateProps
             className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">Optional</Badge>
+              <Badge variant="outline" className="text-xs">
+                Optional
+              </Badge>
               <span className="text-sm font-medium">Additional details</span>
             </div>
             {showOptional ? (
@@ -211,7 +202,9 @@ export function RequestTemplate({ onUseTemplate, onClose }: RequestTemplateProps
                     onChange={(e) =>
                       setData({
                         ...data,
-                        value: e.target.value ? Number(e.target.value) : undefined,
+                        value: e.target.value
+                          ? Number(e.target.value)
+                          : undefined,
                       })
                     }
                     placeholder="100000"
@@ -224,7 +217,9 @@ export function RequestTemplate({ onUseTemplate, onClose }: RequestTemplateProps
                 <label className="text-sm font-medium">Department</label>
                 <Input
                   value={data.department || ""}
-                  onChange={(e) => setData({ ...data, department: e.target.value })}
+                  onChange={(e) =>
+                    setData({ ...data, department: e.target.value })
+                  }
                   placeholder="e.g., Engineering, Sales"
                 />
               </div>

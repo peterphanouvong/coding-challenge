@@ -1,11 +1,7 @@
 import { ActionButtons } from "@/components/ActionButtons";
 import { ClarificationForm } from "@/components/ClarificationForm";
 import { EditableSummary } from "@/components/EditableSummary";
-import {
-  LOCATION_VALUES,
-  REQUEST_TYPE_VALUES,
-  URGENCY_VALUES,
-} from "@/components/RuleBuilder";
+import { URGENCY_VALUES } from "@/components/RuleBuilder";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -37,6 +33,10 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  LOCATION_OPTIONS,
+  REQUEST_TYPE_OPTIONS,
+} from "../../../server/src/constants/legal.constants";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8999";
@@ -496,18 +496,24 @@ export default function ChatPage() {
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {REQUEST_TYPE_VALUES.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        <div className="flex flex-col items-start">
-                          <span className="font-medium text-white">
-                            {type.label}
-                          </span>
-                          <span className="text-xs text-white/60">
-                            {type.description}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {REQUEST_TYPE_OPTIONS.map(
+                      (type: {
+                        value: string;
+                        label: string;
+                        description: string;
+                      }) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium text-white">
+                              {type.label}
+                            </span>
+                            <span className="text-xs text-white/60">
+                              {type.description}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      )
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -550,11 +556,13 @@ export default function ChatPage() {
                     <SelectValue placeholder="Select location..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {LOCATION_VALUES.map((loc) => (
-                      <SelectItem key={loc.value} value={loc.value}>
-                        {loc.label}
-                      </SelectItem>
-                    ))}
+                    {LOCATION_OPTIONS.map(
+                      (loc: { value: string; label: string }) => (
+                        <SelectItem key={loc.value} value={loc.value}>
+                          {loc.label}
+                        </SelectItem>
+                      )
+                    )}
                   </SelectContent>
                 </Select>
               </div>
