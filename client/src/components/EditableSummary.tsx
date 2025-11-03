@@ -1,7 +1,7 @@
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -9,10 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Pencil, RefreshCw, X } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useState } from "react";
-import { REQUEST_TYPE_VALUES, LOCATION_VALUES } from "./RuleBuilder";
-import type { RequestType, Location } from "@/types";
+import {
+  LOCATION_OPTIONS,
+  REQUEST_TYPE_OPTIONS,
+} from "../../../server/src/constants/legal.constants";
 
 interface SummaryField {
   key: string;
@@ -66,11 +68,13 @@ export function EditableSummary({ data, onRetry }: EditableSummaryProps) {
 
   const formatFieldValue = (field: SummaryField) => {
     if (field.key === "requestType") {
-      const typeInfo = REQUEST_TYPE_VALUES.find((t) => t.value === field.value);
+      const typeInfo = REQUEST_TYPE_OPTIONS.find(
+        (t) => t.value === field.value
+      );
       return typeInfo?.label || String(field.value);
     }
     if (field.key === "location") {
-      const locInfo = LOCATION_VALUES.find((l) => l.value === field.value);
+      const locInfo = LOCATION_OPTIONS.find((l) => l.value === field.value);
       return locInfo?.label || String(field.value);
     }
     if (field.key === "value" && typeof field.value === "number") {
@@ -130,7 +134,7 @@ export function EditableSummary({ data, onRetry }: EditableSummaryProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {REQUEST_TYPE_VALUES.map((type) => (
+                      {REQUEST_TYPE_OPTIONS.map((type) => (
                         <SelectItem key={type.value} value={type.value}>
                           {type.label}
                         </SelectItem>
@@ -146,7 +150,7 @@ export function EditableSummary({ data, onRetry }: EditableSummaryProps) {
                 <div key={field.key} className="space-y-1">
                   <Label className="text-white/70 text-xs">{field.label}</Label>
                   <div className="flex flex-wrap gap-1.5">
-                    {LOCATION_VALUES.map((loc) => (
+                    {LOCATION_OPTIONS.map((loc) => (
                       <Badge
                         key={loc.value}
                         variant={
