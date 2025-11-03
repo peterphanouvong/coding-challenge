@@ -100,23 +100,6 @@ export class RuleEngine {
   }
 
   /**
-   * Find missing fields required by any rule
-   */
-  private findMissingFields(info: ExtractedInfo, rules: Rule[]): string[] {
-    const requiredFields = new Set<string>();
-
-    rules.forEach((rule) => {
-      rule.conditions.forEach((condition) => {
-        if (!info[condition.field]) {
-          requiredFields.add(condition.field);
-        }
-      });
-    });
-
-    return Array.from(requiredFields);
-  }
-
-  /**
    * Main routing method - finds the best matching rule
    *
    * Logic:
@@ -255,7 +238,7 @@ export class RuleEngine {
       }
 
       // If equal specificity, use priority
-      return b.priority - a.priority;
+      return a.priority - b.priority;
     })[0];
   }
 
